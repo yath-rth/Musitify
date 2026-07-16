@@ -13,8 +13,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yatharth.musitify.data.entity.Song
+import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.designSystemButton
 import com.yatharth.musitify.ui.theme.designSystemShadowBox
+import com.yatharth.musitify.ui.theme.text
 
 @Composable
 fun SongItemUI(
@@ -23,8 +25,8 @@ fun SongItemUI(
 ) {
     val TAG = "SongItemUI"
 
-    designSystemShadowBox(
-        modifier = Modifier.padding(8.dp)
+    CustomButton(
+        onClick = onPlay
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -32,17 +34,12 @@ fun SongItemUI(
         ) {
             Text(
                 modifier = Modifier.weight(2f),
+                color = text,
                 text = song.name,
-                fontSize = 14.sp,
+                style = adaptiveTypography().bodyMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
-            )
-
-            designSystemButton(
-                modifier = Modifier.weight(1f),
-                text = "Play",
-                onClick = onPlay
             )
         }
     }

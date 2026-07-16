@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.yatharth.musitify.data.entity.Song
-import com.yatharth.musitify.ui.theme.MusitifyTheme
 
 private val previewSongs = listOf(
     Song(

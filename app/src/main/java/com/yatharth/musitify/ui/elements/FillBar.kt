@@ -1,6 +1,6 @@
 package com.yatharth.musitify.ui.elements
 
-import android.R.attr.text
+import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,7 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.yatharth.musitify.ui.theme.adaptiveTypography
+import com.yatharth.musitify.ui.theme.accentColor1
+import com.yatharth.musitify.ui.theme.cardBorder
+import com.yatharth.musitify.ui.theme.secondaryBg
+import com.yatharth.musitify.ui.theme.text
 import kotlin.math.abs
 
 @Composable
@@ -31,14 +37,17 @@ fun FillBar(
     modifier: Modifier = Modifier,
     label: String? = null,
     secondaryLabel: String? = "",
-    color: Color = Color.Blue,
+    color: Color = accentColor1,
     value: Double,
     max: Double,
-    emptyColor: Color = Color.Transparent,
-    secondaryFillColor: Color = Color.Red,
+    remaining: Double? = null,
+    emptyColor: Color = secondaryBg,
+    secondaryFillColor: Color = accentColor1,
     bgColor: Color? = null
 ) {
+    val spent = remaining?.toInt() ?: (max - abs(value)).coerceAtLeast(0.0).toInt()
     val progress = if (max > 0) (abs(value) / max).coerceIn(0.0, 1.0) else 1.0
+//    Log.d("test", "$value $max ${value/max}")
 
     val animatedProgress by animateFloatAsState(
         targetValue = progress.toFloat(),
@@ -63,9 +72,11 @@ fun FillBar(
             if (label != null) {
                 Text(
                     text = label,
-                    color = Color.White,
-//                    style = adaptiveTypography().bodySmall,
-                    fontWeight = FontWeight.Medium
+                    color = text,
+                    style = adaptiveTypography().bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1
                 )
             }
 
@@ -74,8 +85,8 @@ fun FillBar(
 //            if (secondaryLabel != null) {
 //                Text(
 //                    text = "₹${spent} left of ${Formater.getFormattedMoneyNoSign(max)}",
-//                    color = Color.White,
-////                    style = adaptiveTypography().bodySmall,
+//                    color = text,
+//                    style = adaptiveTypography().bodySmall,
 //                    fontWeight = FontWeight.SemiBold
 //                )
 //            }
@@ -94,7 +105,7 @@ fun FillBar(
                     .offset(x = 2.dp, y = 3.dp)
                     .background(
                         shape = RoundedCornerShape(20),
-                        color = Color.Black
+                        color = cardBorder
                     )
             )
 
@@ -108,11 +119,11 @@ fun FillBar(
                         .weight(1f)
                         .border(
                             1.5.dp,
-                            color = Color.Black,
+                            color = cardBorder,
                             shape = RoundedCornerShape(20)
                         )
                         .clip(RoundedCornerShape(20))
-                        .background(Color.Transparent)
+                        .background(secondaryBg)
                 ) {
                     Box(
                         modifier = Modifier
@@ -125,7 +136,7 @@ fun FillBar(
                                 .fillMaxHeight()
                                 .fillMaxWidth(animatedProgress)
                                 .background(
-                                    color = fillColor,
+                                    color = accentColor1,
                                 )
                         )
                     }
