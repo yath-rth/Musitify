@@ -1,7 +1,6 @@
 package com.yatharth.musitify
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,43 +12,42 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.FFmpegKit.Companion.executeAsync
-import com.arthenica.ffmpegkit.FFmpegSession
-import com.arthenica.ffmpegkit.FFprobeSession
-import com.arthenica.ffmpegkit.ReturnCode
-import com.chaquo.python.Python
-import com.chaquo.python.android.AndroidPlatform
-import com.yatharth.musitify.service.DownloadService
+import com.yatharth.musitify.data.repository.PlaylistRepository
+import com.yatharth.musitify.data.repository.SongRepository
+import com.yatharth.musitify.ui.screens.HomeRoute
 import com.yatharth.musitify.ui.theme.MusitifyTheme
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val TAG = "MainActivity"
-
     @Inject
-    lateinit var downloadService: DownloadService
+    lateinit var songRepository: SongRepository
+    @Inject
+    lateinit var playlistRepository: PlaylistRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        lifecycleScope.launch {
-            downloadService.downloadSong(applicationContext = applicationContext)
-        }
+//        lifecycleScope.launch {
+//            songRepository.downloadSong(
+//            )
+//
+//            playlistRepository.downloadPlaylist(
+//                playlistUrl = "https://youtube.com/playlist?list=PLD6E8F044EE05317D&si=He1Zo1el-P5N0Wk0",
+//                outputDir = applicationContext.getExternalFilesDir(null)?.absolutePath
+//            )
+//        }
 
         setContent {
             MusitifyTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+                    HomeRoute(
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
             }

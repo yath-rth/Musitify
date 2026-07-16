@@ -79,4 +79,12 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+
+    implementation(platform(libs.androidx.compose.bom))
+
+    implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended")
+
+    implementation("androidx.media3:media3-exoplayer:1.10.1")
+    implementation("androidx.media3:media3-session:1.10.1")
 }
