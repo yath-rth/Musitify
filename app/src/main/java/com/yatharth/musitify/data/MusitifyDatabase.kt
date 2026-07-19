@@ -23,5 +23,3 @@ abstract class MusitifyDatabase : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
     abstract fun songToPlaylistDao(): SongToPlaylistDao
 }
-
-//TODO: store and fetch the album, song cover arts

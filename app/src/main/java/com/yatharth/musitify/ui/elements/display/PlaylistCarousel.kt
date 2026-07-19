@@ -1,0 +1,198 @@
+package com.yatharth.musitify.ui.elements.display
+
+import android.R.attr.maxLines
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.yatharth.musitify.data.entity.Playlist
+import com.yatharth.musitify.data.entity.PlaylistInfo
+import com.yatharth.musitify.ui.elements.ShadowBox
+import com.yatharth.musitify.ui.theme.adaptiveTypography
+import com.yatharth.musitify.ui.theme.text
+import kotlinx.coroutines.launch
+import java.io.File
+import kotlin.math.abs
+
+@Composable
+fun PlaylistCarousel(
+    playlists: List<PlaylistInfo>,
+    currentPlayingIndex: Int,
+    onPlaylistSelected: (Int) -> Unit,
+    onLongClick: (Playlist) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val coroutineScope = rememberCoroutineScope()
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val itemWidth = 200.dp
+    val sidePadding = (screenWidth - itemWidth) / 2
+
+    // Only scroll-to on the INITIAL composition / external playback change,
+    // not something that fights the user's manual scroll.
+    LaunchedEffect(currentPlayingIndex) {
+        if (playlists.isEmpty()) return@LaunchedEffect
+        listState.animateScrollToItem(currentPlayingIndex)
+    }
+
+    // Track which item is centered, purely for visual state (e.g. "tap to play" affordance)
+    val centeredIndex by remember {
+        derivedStateOf { findCenterItemIndex(listState) ?: currentPlayingIndex }
+    }
+
+    LazyRow(
+        state = listState,
+        flingBehavior = flingBehavior,
+        contentPadding = PaddingValues(horizontal = sidePadding),
+        horizontalArrangement = Arrangement.spacedBy((-20).dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        itemsIndexed(playlists, key = { _, s -> s.playlist.id }) { index, playlistInfo ->
+            val layoutInfo = listState.layoutInfo
+            val itemInfo = layoutInfo.visibleItemsInfo.find { it.index == index }
+
+            val rawDistance = if (itemInfo == null) 1f else {
+                val center = layoutInfo.viewportEndOffset / 2f
+                val itemCenter = itemInfo.offset + itemInfo.size / 2f
+                ((itemCenter - center) / (layoutInfo.viewportEndOffset / 2f)).coerceIn(-1f, 1f)
+            }
+
+            val distanceFromCenter = if (abs(rawDistance) < 0.5f) 0f else rawDistance
+
+            val scale = lerp(1f, 0.75f, abs(distanceFromCenter))
+            val rotationY = lerp(0f, 45f, distanceFromCenter)
+            val alpha = lerp(1f, 0.5f, abs(distanceFromCenter))
+            val isNearCenter = abs(distanceFromCenter) < 0.15f
+
+            Box(
+                modifier = Modifier
+                    .width(itemWidth)
+                    .aspectRatio(1f)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        this.rotationY = rotationY
+                        this.alpha = alpha
+                        cameraDistance = 12f * density
+                    }
+                    .combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onLongClick = { onLongClick(playlistInfo.playlist) },
+                        onClick = {
+                            if (isNearCenter) {
+                                // tapping the centered cover = explicit play
+                                onPlaylistSelected(playlistInfo.playlist.id)
+                            } else {
+                                // tapping a side cover = just scroll it to center, no play
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(playlistInfo.playlist.id)
+                                }
+                            }
+                        }
+                    )
+            ) {
+                PlaylistArt(playlistInfo, modifier = Modifier.fillMaxSize())
+            }
+        }
+    }
+}
+
+@Composable
+fun PlaylistArt(
+    playlist: PlaylistInfo,
+    modifier: Modifier
+) {
+    ShadowBox(
+        modifier = modifier,
+        shadowOffsetX = 0.dp,
+        shadowOffsetY = 0.dp,
+        borderThickness = 5.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxHeight(),
+            contentAlignment = Alignment.Center
+        ) {
+            playlist.playlist.artPath?.let {
+                AsyncImage(
+                    model = File(it),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .blur(
+                            radius = 3.dp
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.6f))
+                        )
+                    )
+                    .padding(12.dp)
+            ) {
+                Column {
+                    Text(
+                        text = playlist.playlist.name,
+                        color = text,
+                        style = adaptiveTypography().titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Text(
+                        text = "${playlist.numOfSongs} songs",
+                        color = text,
+                        style = adaptiveTypography().bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}

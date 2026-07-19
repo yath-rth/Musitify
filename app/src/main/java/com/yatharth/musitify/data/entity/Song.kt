@@ -10,8 +10,9 @@ import androidx.room.PrimaryKey
 data class Song(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val name: String,
-    val length: Int,
+    val length: Long,
     val filePath: String,
+    val artPath: String,
     val timeHeard: Int,
     val downloadedAt: Long
 )

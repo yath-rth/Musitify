@@ -21,13 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.yatharth.musitify.data.entity.Playlist
+import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.viewmodel.PlaylistDialogUiState
 import com.yatharth.musitify.ui.theme.accentColor1
 import com.yatharth.musitify.ui.theme.adaptiveTypography
+import com.yatharth.musitify.ui.theme.checkBoxColors
 import com.yatharth.musitify.ui.theme.secondaryBg
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textFieldColors
 
 @Composable
 fun PlaylistDialog(
@@ -42,9 +44,9 @@ fun PlaylistDialog(
     onNewPlaylistNameChange: (String) -> Unit,
 
     // Add-to-existing fields
-    playlists: List<Playlist>,
-    selectedPlaylist: Playlist?,
-    onSelectPlaylist: (Playlist) -> Unit,
+    playlists: List<PlaylistInfo>,
+    selectedPlaylist: PlaylistInfo?,
+    onSelectPlaylist: (PlaylistInfo) -> Unit,
 
     // Song selection (used in both modes)
     allSongs: List<Song>,
@@ -65,7 +67,6 @@ fun PlaylistDialog(
         },
         text = {
             Column {
-                // Mode toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -85,7 +86,6 @@ fun PlaylistDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (isAddToExistingMode) {
-                    // Playlist picker
                     if (playlists.isEmpty()) {
                         Text(
                             text = "No playlists yet — switch to Create New",
@@ -107,11 +107,12 @@ fun PlaylistDialog(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Checkbox(
-                                        checked = selectedPlaylist?.id == playlist.id,
-                                        onCheckedChange = { onSelectPlaylist(playlist) }
+                                        checked = selectedPlaylist?.playlist?.id == playlist.playlist.id,
+                                        onCheckedChange = { onSelectPlaylist(playlist) },
+                                        colors = checkBoxColors()
                                     )
                                     Text(
-                                        text = playlist.name,
+                                        text = playlist.playlist.name,
                                         style = adaptiveTypography().bodySmall,
                                         color = text
                                     )
@@ -120,19 +121,24 @@ fun PlaylistDialog(
                         }
                     }
                 } else {
-                    // New playlist name input
                     OutlinedTextField(
                         modifier = Modifier.fillMaxWidth(),
                         value = newPlaylistName,
                         onValueChange = onNewPlaylistNameChange,
-                        placeholder = { Text("Playlist name") },
-                        singleLine = true
+                        placeholder = {
+                            Text(
+                                "Playlist name",
+                                color = text,
+                                style = adaptiveTypography().bodyMedium
+                            )
+                        },
+                        singleLine = true,
+                        colors = textFieldColors(),
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Song multi-select — shared by both modes
                 Text(
                     text = "Select songs (${selectedSongIds.size} selected)",
                     style = adaptiveTypography().labelSmall,
@@ -148,7 +154,8 @@ fun PlaylistDialog(
                         ) {
                             Checkbox(
                                 checked = selectedSongIds.contains(song.id),
-                                onCheckedChange = { onToggleSong(song) }
+                                onCheckedChange = { onToggleSong(song) },
+                                colors = checkBoxColors()
                             )
                             Text(
                                 text = song.name,
@@ -172,6 +179,7 @@ fun PlaylistDialog(
                             Text("Saving...", style = adaptiveTypography().labelSmall, color = text)
                         }
                     }
+
                     is PlaylistDialogUiState.Success -> {
                         Text(
                             text = "Saved",
@@ -180,6 +188,7 @@ fun PlaylistDialog(
                             fontWeight = FontWeight.Bold
                         )
                     }
+
                     is PlaylistDialogUiState.Error -> {
                         Text(
                             text = "Failed: ${state.message}",
@@ -187,7 +196,9 @@ fun PlaylistDialog(
                             color = Color.Red
                         )
                     }
-                    PlaylistDialogUiState.Idle -> { /* nothing */ }
+
+                    PlaylistDialogUiState.Idle -> { /* nothing */
+                    }
                 }
             }
         },

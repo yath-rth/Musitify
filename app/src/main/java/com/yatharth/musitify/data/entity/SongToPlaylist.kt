@@ -25,5 +25,6 @@ data class SongToPlaylist(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val songId: Int,
     val playListId: Int,
+    val position: Int,
     val addedOn: Long,
 )

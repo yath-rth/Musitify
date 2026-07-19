@@ -22,6 +22,7 @@ import com.yatharth.musitify.ui.theme.accentColor1
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.secondaryBg
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textFieldColors
 
 @Composable
 fun AddSongDialog(
@@ -70,7 +71,8 @@ fun AddSongDialog(
                     placeholder = {
                         Text(if (isPlaylistMode) "Paste playlist URL" else "Paste video URL")
                     },
-                    singleLine = true
+                    singleLine = true,
+                    colors = textFieldColors()
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -81,7 +83,7 @@ fun AddSongDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            CircularProgressIndicator(modifier = Modifier.height(20.dp))
+                            CircularProgressIndicator(modifier = Modifier.height(10.dp))
                             Text(
                                 text = if (isPlaylistMode)
                                     "Downloading (${state.completed}/${state.total})..."

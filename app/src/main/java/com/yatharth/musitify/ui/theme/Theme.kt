@@ -2,6 +2,8 @@ package com.yatharth.musitify.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.CheckboxColors
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.darkColorScheme
@@ -31,6 +33,13 @@ fun textFieldColors() = TextFieldDefaults.colors(
     unfocusedContainerColor = itemsBg,
     focusedIndicatorColor = text.copy(alpha = 0.2f),
     unfocusedIndicatorColor = text.copy(alpha = 0.1f),
+)
+
+@Composable
+fun checkBoxColors() = CheckboxDefaults.colors(
+    checkedColor = accentColor2.copy(alpha = 0.6f),
+    uncheckedColor = text,
+    checkmarkColor = accentColor2
 )
 
 @Composable

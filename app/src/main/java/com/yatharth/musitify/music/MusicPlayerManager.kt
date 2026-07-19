@@ -6,7 +6,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSessionService
 import dagger.hilt.android.AndroidEntryPoint
 
-//TODO: Repeat the queue i.e. a circular queue as well as repeat a selected track and random
 //TODO: Modify position and songs in the queue
 //TODO: Count the time for each song and playlist as they are played ( an approx number works here)
 @AndroidEntryPoint

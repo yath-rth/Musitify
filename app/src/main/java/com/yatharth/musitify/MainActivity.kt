@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.lifecycleScope
 import com.yatharth.musitify.ui.theme.MusitifyTheme
 import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SongRepository
@@ -19,6 +20,7 @@ import com.yatharth.musitify.ui.screens.HomeScreen
 import com.yatharth.musitify.ui.theme.background
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -36,9 +38,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
 //        lifecycleScope.launch {
-//            songRepository.downloadSong(
-//            )
-//
 //            playlistRepository.downloadPlaylist(
 //                playlistUrl = "https://youtube.com/playlist?list=PLD6E8F044EE05317D&si=He1Zo1el-P5N0Wk0",
 //                outputDir = applicationContext.getExternalFilesDir(null)?.absolutePath
@@ -47,32 +46,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MusitifyTheme {
-                Scaffold(
+                HomeScreen(
                     modifier = Modifier
-                        .fillMaxSize(),
-                    containerColor = background
-                ) { innerPadding ->
-                    HomeScreen(
-                        modifier = Modifier.padding(innerPadding),
-                    )
-                }
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MusitifyTheme {
-        Greeting("Android")
     }
 }

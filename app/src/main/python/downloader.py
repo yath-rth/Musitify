@@ -1,18 +1,40 @@
 import yt_dlp
 import time
 
+import os
+import time
+import yt_dlp
+
 def downloadSong(url, output_path, retries=3, delay=3):
     ydl_opts = {
         "outtmpl": f"{output_path}/%(title)s.%(ext)s",
         "format": "bestaudio/best",
+        "writethumbnail": True,
     }
 
     last_error = None
+
     for attempt in range(retries):
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                return ydl.prepare_filename(info)
+
+                audio_path = ydl.prepare_filename(info)
+                base = os.path.splitext(audio_path)[0]
+
+                thumbnail_path = None
+                for ext in (".webp", ".jpg", ".png"):
+                    path = base + ext
+                    if os.path.exists(path):
+                        thumbnail_path = path
+                        break
+
+                return {
+                    "audio": audio_path,
+                    "thumbnail": thumbnail_path,
+                    "duration": info.get("duration")
+                }
+
         except Exception as e:
             last_error = e
             if attempt < retries - 1:

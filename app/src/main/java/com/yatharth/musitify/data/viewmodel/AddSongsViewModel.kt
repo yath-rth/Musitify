@@ -40,10 +40,15 @@ class AddSongsViewModel @Inject constructor(
 
     fun addPlaylist(url: String) {
         viewModelScope.launch {
-            _state.value = AddSongsUiState.Loading()
+            _state.value = AddSongsUiState.Loading(completed = 0, total = 1)
             try {
-                val count = playlistRepository.downloadPlaylist(url)
-//                _state.value = AddSongsUiState.Success(count = count)
+                val count = playlistRepository.downloadPlaylist(
+                    playlistUrl = url,
+                    onProgress = { completed, total ->
+                        _state.value = AddSongsUiState.Loading(completed = completed, total = total)
+                    }
+                )
+                _state.value = AddSongsUiState.Success(count = count)
             } catch (e: Exception) {
                 _state.value = AddSongsUiState.Error(e.message ?: "Unknown error")
             }

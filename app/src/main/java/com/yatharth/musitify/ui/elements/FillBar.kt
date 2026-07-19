@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.elements
 
+import android.R.attr.fillColor
 import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -40,25 +41,14 @@ fun FillBar(
     color: Color = accentColor1,
     value: Double,
     max: Double,
-    remaining: Double? = null,
-    emptyColor: Color = secondaryBg,
-    secondaryFillColor: Color = accentColor1,
-    bgColor: Color? = null
+    bgColor: Color = secondaryBg
 ) {
-    val spent = remaining?.toInt() ?: (max - abs(value)).coerceAtLeast(0.0).toInt()
     val progress = if (max > 0) (abs(value) / max).coerceIn(0.0, 1.0) else 1.0
-//    Log.d("test", "$value $max ${value/max}")
 
     val animatedProgress by animateFloatAsState(
         targetValue = progress.toFloat(),
         label = "budgetProgress"
     )
-
-    val fillColor = when {
-        progress > .80 -> color
-        progress > .50 -> secondaryFillColor
-        else -> emptyColor
-    }
 
     Column(
         modifier = modifier,
@@ -82,14 +72,14 @@ fun FillBar(
 
             Spacer(modifier = Modifier.weight(1f))
 
-//            if (secondaryLabel != null) {
-//                Text(
-//                    text = "₹${spent} left of ${Formater.getFormattedMoneyNoSign(max)}",
-//                    color = text,
-//                    style = adaptiveTypography().bodySmall,
-//                    fontWeight = FontWeight.SemiBold
-//                )
-//            }
+            if (secondaryLabel != null) {
+                Text(
+                    text = secondaryLabel,
+                    color = text,
+                    style = adaptiveTypography().bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.padding(1.dp))
@@ -129,14 +119,14 @@ fun FillBar(
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(20))
-                            .background(bgColor ?: fillColor.copy(alpha = 0.3f))
+                            .background(bgColor)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(animatedProgress)
                                 .background(
-                                    color = accentColor1,
+                                    color = color,
                                 )
                         )
                     }

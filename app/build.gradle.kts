@@ -85,6 +85,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-extended")
 
-    implementation("androidx.media3:media3-exoplayer:1.10.1")
-    implementation("androidx.media3:media3-session:1.10.1")
+    implementation("androidx.media3:media3-exoplayer:1.10.1") //Both of these are used to
+    implementation("androidx.media3:media3-session:1.10.1") //access and provide android's media interface
+
+    implementation("io.coil-kt:coil-compose:2.7.0") // To load the images properly in the background
 }

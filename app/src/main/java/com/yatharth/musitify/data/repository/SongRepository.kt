@@ -2,6 +2,7 @@ package com.yatharth.musitify.data.repository
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.ui.input.key.Key.Companion.F
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.yatharth.musitify.data.dao.SongDao
@@ -39,24 +40,35 @@ class SongRepository @Inject constructor(
                 applicationContext.getExternalFilesDir(null)?.absolutePath
             )
             val songName = convertSong.invoke(result)
+            val durationSeconds = result["duration"]?.toLong()
+            val durationMs = durationSeconds?.times(1000)
+
             songDao.addSong(
                 Song(
                     name = songName,
-                    length = 60, //TODO: Implement a way to provide meta-data from yt-dlp to kotlin
+                    length = durationMs ?: 0,
                     timeHeard = 0,
                     filePath = applicationContext.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.mp3",
+                    artPath = applicationContext.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.webp",
                     downloadedAt = System.currentTimeMillis(),
                 )
             )
-//            audioPlayer.playAudio(
-//                applicationContext.getExternalFilesDir(null)?.absolutePath,
-//                "$songName.mp3"
-//            )
         } catch (e: Exception) {
             Log.e(TAG, e.message ?: "Error somewhere")
         }
     }
 
     val allSongs = songDao.getAllSongs()
+
+    suspend fun deleteSong(id: Int) {
+        val song = songDao.getSongById(id) ?: return
+        val audioFile = File(song.filePath)
+        val artFile = File(song.artPath)
+
+        if (audioFile.exists()) audioFile.delete()
+        if (artFile.exists()) artFile.delete()
+
+        songDao.deleteSong(id)
+    }
 
 }

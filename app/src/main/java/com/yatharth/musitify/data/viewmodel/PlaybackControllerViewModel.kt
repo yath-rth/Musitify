@@ -1,6 +1,8 @@
 package com.yatharth.musitify.data.viewmodel
 
+import android.os.Bundle
 import androidx.lifecycle.ViewModel
+import androidx.media3.common.Player
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.repository.MediaControllerRepository
 import com.yatharth.musitify.data.repository.SongRepository
@@ -11,19 +13,22 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PlaybackControllerViewModel @Inject constructor(
-    mediaControllerRepository: MediaControllerRepository
+    private val mediaControllerRepository: MediaControllerRepository
 ) : ViewModel() {
 
     val controller = mediaControllerRepository.controller
     val uiState = mediaControllerRepository.uiState
 
-    fun playSongs(songs: List<Song>, startIndex: Int) {
+    fun playSongs(songs: List<Song>, startIndex: Int, playlistId: Int?) {
+        mediaControllerRepository.setActivePlaylist(playlistId)
+
         val mediaItems = songs.map { song ->
             androidx.media3.common.MediaItem.Builder()
                 .setUri(song.filePath)
                 .setMediaMetadata(
                     androidx.media3.common.MediaMetadata.Builder()
                         .setTitle(song.name)
+                        .setExtras(Bundle().apply { putInt("songId", song.id) })
                         .build()
                 )
                 .build()
@@ -33,8 +38,19 @@ class PlaybackControllerViewModel @Inject constructor(
         controller.value?.play()
     }
 
+    fun toggleRepeatMode() {
+        controller.value?.let { player ->
+            player.repeatMode = when (player.repeatMode) {
+                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_OFF
+                else -> Player.REPEAT_MODE_OFF
+            }
+        }
+    }
+
     fun pause() {
-        if(controller.value?.isPlaying == true) controller.value?.pause()
+        if (controller.value?.isPlaying == true) controller.value?.pause()
         else controller.value?.play()
     }
 
