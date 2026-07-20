@@ -1,5 +1,6 @@
 package com.yatharth.musitify.data.entity
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey

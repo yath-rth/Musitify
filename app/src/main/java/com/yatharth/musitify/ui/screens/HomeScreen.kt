@@ -5,6 +5,7 @@ import android.R.attr.name
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme.typography
@@ -28,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.common.collect.Multimaps.index
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.viewmodel.AddSongsViewModel
@@ -41,6 +44,7 @@ import com.yatharth.musitify.ui.elements.display.MusicCarousel
 import com.yatharth.musitify.ui.elements.PlaybackControls
 import com.yatharth.musitify.ui.elements.PlaylistDialog
 import com.yatharth.musitify.ui.elements.SongItemUI
+import com.yatharth.musitify.ui.elements.SortIcon
 import com.yatharth.musitify.ui.elements.display.PlaylistCarousel
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.background
@@ -55,9 +59,11 @@ fun HomeScreen(
 ) {
     val TAG = "HomeScreen"
 
-    val allSongs by homeScreenViewModel.allSongs.collectAsState()
+    val allSongs by homeScreenViewModel.sortedSongs.collectAsState()
+    val filteredSongs by homeScreenViewModel.searchResults.collectAsState()
     val uiState by playbackControllerViewModel.uiState.collectAsState()
     val addState by addSongsViewModel.state.collectAsState()
+    val sortMode by homeScreenViewModel.sortMode.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var url by remember { mutableStateOf("") }
@@ -67,6 +73,7 @@ fun HomeScreen(
     var showPlaylistDialog by remember { mutableStateOf(false) }
     var isAddToExistingMode by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
+    val songFilterQuery by homeScreenViewModel.searchQuery.collectAsState()
     var selectedSongIds by remember { mutableStateOf(setOf<Int>()) }
 
     val playlists by homeScreenViewModel.playlists.collectAsState()
@@ -179,8 +186,8 @@ fun HomeScreen(
                                     playlistId
                                 )
                             },
-                            onLongSelect = { index ->
-                                songToDelete = index to songsInPlaylist[index].name
+                            onLongSelect = { song ->
+                                songToDelete = song.id to song.name
                                 showSongDeleteConfirm.value = true
                             },
                             modifier = Modifier
@@ -194,7 +201,9 @@ fun HomeScreen(
             item {
                 AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
                     Row(
-
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "ALL SONGS",
@@ -202,26 +211,34 @@ fun HomeScreen(
                             style = adaptiveTypography().bodyLarge,
                             fontWeight = FontWeight.ExtraBold,
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 4.dp, top = 30.dp)
                         )
 
-                        Spacer(Modifier.weight(1f))
-
-                        CustomSwitch(
-                            checked = isListMode,
-                            onCheckedChange = {
-                                isListMode = !isListMode
+                        SortIcon(
+                            mode = sortMode,
+                            onClick = {
+                                homeScreenViewModel.onSortModeToggle()
                             }
                         )
+
+//                        CustomSwitch(
+//                            checked = isListMode,
+//                            onCheckedChange = {
+//                                isListMode = !isListMode
+//                            }
+//                        )
                     }
                 }
 
                 AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
-                    if(!isListMode){
+                    if (!isListMode) {
                         MusicCarousel(
                             songs = allSongs,
                             size = 140,
-                            spacing = -10,
+                            spacing = -5,
+                            threshold = 0.5f,
+                            scroll = false,
                             currentPlayingIndex = allSongs.indexOfFirst { it.name == uiState.currentTitle }
                                 .coerceAtLeast(0),
                             onTrackSelected = { index ->
@@ -231,20 +248,32 @@ fun HomeScreen(
                                     null
                                 )
                             },
-                            onLongSelect = { index ->
-                                songToDelete = index to allSongs[index].name
+                            onLongSelect = { song ->
+                                songToDelete = song.id to song.name
                                 showSongDeleteConfirm.value = true
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 16.dp)
                         )
-                    }
-                    else{
-                        LazyColumn(
-
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp)
                         ) {
-
+                            allSongs.forEachIndexed { index, song ->
+                                SongItemUI(
+                                    song = song,
+                                    onPlay = {
+                                        playbackControllerViewModel.playSongs(allSongs, index, null)
+                                    },
+                                    onLongPress = {
+                                        songToDelete = song.id to song.name
+                                        showSongDeleteConfirm.value = true
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -256,6 +285,7 @@ fun HomeScreen(
                 onDismiss = {
                     showAddDialog = false
                     addSongsViewModel.resetState()
+                    url = ""
                 },
                 url = url,
                 onUrlChange = { url = it },
@@ -323,6 +353,7 @@ fun HomeScreen(
                     showPlaylistDialog = false
                     homeScreenViewModel.resetState()
                     selectedSongIds = emptySet()
+                    newPlaylistName = ""
                 },
                 isAddToExistingMode = isAddToExistingMode,
                 onModeChange = {
@@ -331,10 +362,12 @@ fun HomeScreen(
                 },
                 newPlaylistName = newPlaylistName,
                 onNewPlaylistNameChange = { newPlaylistName = it },
+                songQuery = songFilterQuery,
+                onSongFilter = { homeScreenViewModel.onSearchQueryChange(it) },
                 playlists = playlists,
                 selectedPlaylist = selectedPlaylist,
                 onSelectPlaylist = { selectedPlaylist = it },
-                allSongs = allSongs,
+                allSongs = filteredSongs,
                 selectedSongIds = selectedSongIds,
                 onToggleSong = { song ->
                     selectedSongIds = if (selectedSongIds.contains(song.id))

@@ -48,23 +48,28 @@ class PlaylistRepository @Inject constructor(
         val py = Python.getInstance()
         val module = py.getModule("downloader")
 
-        val urlsResult = module.callAttr("get_playlist_urls", playlistUrl)
-        val urls: List<String> = urlsResult.asList().map { it.toString() }
+        val result = module.callAttr("get_playlist_urls", playlistUrl)
+
+        val playlistName = result?.callAttr("get", "name")?.toString() ?: "Unknown Playlist"
+        val urlsObj = result?.callAttr("get", "urls")
+        val urls: List<String> = urlsObj?.asList()?.map { it.toString() } ?: emptyList()
         val total = urls.size
+
+        Log.d(TAG, "Playlist: $playlistName, ${urls.size} tracks")
 
         val completedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val semaphore = Semaphore(maxConcurrent)
 
-        urls.map { url ->
+        val songIds: List<Int?> = urls.map { url ->
             async(Dispatchers.IO) {
                 semaphore.withPermit {
                     try {
-                        val result = module.callAttr("downloadSong", url, outputDir)
-                        val songName = convertSong.invoke(result)
-                        val durationSeconds = result["duration"]?.toLong()
+                        val downloadResult = module.callAttr("downloadSong", url, outputDir)
+                        val songName = convertSong.invoke(downloadResult)
+                        val durationSeconds = downloadResult?.callAttr("get", "duration")?.toLong()
                         val durationMs = durationSeconds?.times(1000)
 
-                        songDao.addSong(
+                        val insertedId = songDao.addSong(
                             Song(
                                 name = songName,
                                 length = durationMs ?: 0,
@@ -74,8 +79,15 @@ class PlaylistRepository @Inject constructor(
                                 downloadedAt = System.currentTimeMillis(),
                             )
                         )
+
+                        if (insertedId == -1L) {
+                            songDao.getSongByName(songName)?.id
+                        } else {
+                            insertedId.toInt()
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, e.message ?: "Error somewhere")
+                        null
                     } finally {
                         val done = completedCount.incrementAndGet()
                         onProgress(done, total)
@@ -84,22 +96,43 @@ class PlaylistRepository @Inject constructor(
             }
         }.awaitAll()
 
+        val validSongIds = songIds.filterNotNull()
+
+        if (validSongIds.isNotEmpty()) {
+            createPlaylist(playlistName, validSongIds)
+            Log.d(TAG, "Created playlist '$playlistName' with ${validSongIds.size} songs")
+        } else {
+            Log.e(TAG, "No songs downloaded successfully, skipping playlist creation")
+        }
+
         completedCount.get()
     }
 
     suspend fun createPlaylist(name: String, songIds: List<Int>) = withContext(Dispatchers.IO) {
-        val playlist = Playlist(
-            name = name,
-            timeHeard = 0,
-            createdAt = System.currentTimeMillis()
+        val existing = playlistDao.getPlaylistByName(name)
+
+        val playlistId: Int
+        if (existing != null) {
+            Log.d(TAG, "Playlist '$name' already exists, adding songs to it")
+            playlistId = existing.id
+            addSongsToPlaylist(playlistId, songIds)
+        } else {
+            val playlist = Playlist(
+                name = name,
+                timeHeard = 0,
+                createdAt = System.currentTimeMillis()
+            )
+            val id = playlistDao.addPlaylist(playlist)
+            playlistId = id.toInt()
+            addSongsToPlaylist(playlistId, songIds)
+        }
+
+        val songs = songDao.getSongsByIds(songIds)
+        val art = getOrCreatePlaylistCover(playlistId, songs)
+        playlistDao.updatePlaylist(
+            (existing ?: Playlist(id = playlistId, name = name, timeHeard = 0, createdAt = System.currentTimeMillis()))
+                .copy(id = playlistId, artPath = art.path)
         )
-        val id = playlistDao.addPlaylist(playlist)
-
-        addSongsToPlaylist(id.toInt(), songIds)
-
-        val songs = songDao.getSongsByIds(songIds) // however you fetch songs by id list
-        val art = getOrCreatePlaylistCover(id.toInt(), songs)
-        playlistDao.updatePlaylist(playlist.copy(id = id.toInt(), artPath = art.path))
     }
 
     fun getOrCreatePlaylistCover(playlistId: Int, songs: List<Song>): File {
@@ -151,5 +184,6 @@ class PlaylistRepository @Inject constructor(
 
     suspend fun removeSong(songId: Int, playlistId: Int) {
         songToPlaylistDao.remove(songId, playlistId)
+        Log.d("Temp", "Removed song $songId from $playlistId")
     }
 }

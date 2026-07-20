@@ -37,8 +37,8 @@ fun PlaybackControls(
 ) {
 
     val repeatIcon = when (uiState.repeatMode) {
-        0, 1 -> Icons.Outlined.Repeat
-        2 -> Icons.Outlined.RepeatOne
+        0, 2 -> Icons.Outlined.Repeat
+        1 -> Icons.Outlined.RepeatOne
         else -> Icons.Outlined.Repeat
     }
 
@@ -63,11 +63,6 @@ fun PlaybackControls(
                 else null
             )
         }
-
-        Log.d(
-            "PlaybackControls",
-            "value = ${uiState.positionMs.toDouble()} max = ${uiState.durationMs.toDouble()}"
-        )
 
         ShadowBox(
 //            modifier = Modifier.padding(8.dp)

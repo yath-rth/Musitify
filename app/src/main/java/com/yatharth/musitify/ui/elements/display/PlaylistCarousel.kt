@@ -44,6 +44,7 @@ import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.ui.elements.ShadowBox
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.util.Formatter
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.abs
@@ -63,16 +64,9 @@ fun PlaylistCarousel(
     val itemWidth = 200.dp
     val sidePadding = (screenWidth - itemWidth) / 2
 
-    // Only scroll-to on the INITIAL composition / external playback change,
-    // not something that fights the user's manual scroll.
     LaunchedEffect(currentPlayingIndex) {
         if (playlists.isEmpty()) return@LaunchedEffect
         listState.animateScrollToItem(currentPlayingIndex)
-    }
-
-    // Track which item is centered, purely for visual state (e.g. "tap to play" affordance)
-    val centeredIndex by remember {
-        derivedStateOf { findCenterItemIndex(listState) ?: currentPlayingIndex }
     }
 
     LazyRow(
@@ -158,7 +152,7 @@ fun PlaylistArt(
                         .fillMaxWidth()
                         .aspectRatio(1f)
                         .blur(
-                            radius = 3.dp
+                            radius = 1.dp
                         ),
                     contentScale = ContentScale.Crop
                 )
@@ -170,7 +164,11 @@ fun PlaylistArt(
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.6f))
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.5f to Color.White.copy(alpha = 0.8f),
+                                1f to Color.White
+                            )
                         )
                     )
                     .padding(12.dp)
@@ -179,15 +177,19 @@ fun PlaylistArt(
                     Text(
                         text = playlist.playlist.name,
                         color = text,
-                        style = adaptiveTypography().titleMedium,
-                        maxLines = 1,
+                        style = adaptiveTypography().titleSmall,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     Text(
-                        text = "${playlist.numOfSongs} songs",
+                        text = "${playlist.numOfSongs} songs • ${
+                            Formatter.formatTimeToMinutes(
+                                playlist.playlistLength
+                            )
+                        }",
                         color = text,
-                        style = adaptiveTypography().bodyLarge,
+                        style = adaptiveTypography().bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

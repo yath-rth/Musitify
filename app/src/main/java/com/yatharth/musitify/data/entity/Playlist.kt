@@ -17,4 +17,5 @@ data class PlaylistInfo(
     @Embedded
     val playlist: Playlist,
     val numOfSongs: Int,
+    val playlistLength: Long
 )

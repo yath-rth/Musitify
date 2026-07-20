@@ -46,4 +46,6 @@ def get_playlist_urls(playlist_url):
     ydl_opts = {"extract_flat": True, "quiet": True}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(playlist_url, download=False)
-        return [entry["url"] for entry in info["entries"] if entry]
+        urls = [entry["url"] for entry in info["entries"] if entry]
+        playlist_name = info.get("title", "Unknown Playlist")
+        return {"name": playlist_name, "urls": urls}

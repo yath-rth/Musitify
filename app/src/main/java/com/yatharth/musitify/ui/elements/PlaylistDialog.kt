@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -20,7 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.viewmodel.PlaylistDialogUiState
@@ -42,6 +45,9 @@ fun PlaylistDialog(
     // Create-mode fields
     newPlaylistName: String,
     onNewPlaylistNameChange: (String) -> Unit,
+
+    songQuery: String,
+    onSongFilter: (String) -> Unit,
 
     // Add-to-existing fields
     playlists: List<PlaylistInfo>,
@@ -140,11 +146,25 @@ fun PlaylistDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Select songs (${selectedSongIds.size} selected)",
+                    text = "Select songs | (${selectedSongIds.size} selected)",
                     style = adaptiveTypography().labelSmall,
                     color = text.copy(alpha = 0.6f)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = songQuery,
+                    onValueChange = onSongFilter,
+                    placeholder = {
+                        Text(
+                            "Find song...",
+                            color = text,
+                            style = adaptiveTypography().bodyMedium
+                        )
+                    },
+                    singleLine = true,
+                    colors = textFieldColors(),
+                )
                 LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
                     items(allSongs, key = { it.id }) { song ->
                         Row(
@@ -157,11 +177,17 @@ fun PlaylistDialog(
                                 onCheckedChange = { onToggleSong(song) },
                                 colors = checkBoxColors()
                             )
+                            AsyncImage(
+                                model = song.artPath,
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp)
+                            )
                             Text(
                                 text = song.name,
                                 style = adaptiveTypography().bodySmall,
                                 color = text,
-                                maxLines = 1
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

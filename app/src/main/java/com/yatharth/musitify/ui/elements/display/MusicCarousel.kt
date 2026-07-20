@@ -36,8 +36,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.google.common.math.Quantiles.scale
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.ui.elements.ShadowBox
+import com.yatharth.musitify.ui.theme.adaptiveTypography
+import com.yatharth.musitify.util.Formatter
+import com.yatharth.musitify.util.SongMedia.playCountOf
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.abs
@@ -48,9 +52,11 @@ fun MusicCarousel(
     songs: List<Song>,
     size: Int = 180,
     spacing: Int = -20,
+    threshold: Float = 0.5f,
+    scroll: Boolean = true,
     currentPlayingIndex: Int,
     onTrackSelected: (Int) -> Unit,
-    onLongSelect: (Int) -> Unit
+    onLongSelect: (Song) -> Unit
 ) {
     val listState = rememberLazyListState()
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
@@ -59,11 +65,11 @@ fun MusicCarousel(
     val itemWidth = (size).dp
     val sidePadding = (screenWidth - itemWidth) / 2
 
-    // Only scroll-to on the INITIAL composition / external playback change,
-    // not something that fights the user's manual scroll.
-    LaunchedEffect(currentPlayingIndex) {
-        if (songs.isEmpty()) return@LaunchedEffect
-        listState.animateScrollToItem(currentPlayingIndex)
+    if (scroll) {
+        LaunchedEffect(currentPlayingIndex) {
+            if (songs.isEmpty()) return@LaunchedEffect
+            listState.animateScrollToItem(currentPlayingIndex)
+        }
     }
 
     // Track which item is centered, purely for visual state (e.g. "tap to play" affordance)
@@ -88,58 +94,56 @@ fun MusicCarousel(
                 ((itemCenter - center) / (layoutInfo.viewportEndOffset / 2f)).coerceIn(-1f, 1f)
             }
 
-            val distanceFromCenter = if (abs(rawDistance) < 0.5f) 0f else rawDistance
+            val distanceFromCenter = if (abs(rawDistance) < threshold) 0f else rawDistance
 
             val scaleTarget = lerp(1f, 0.75f, abs(distanceFromCenter))
             val rotationTarget = lerp(0f, 45f, distanceFromCenter)
             val alphaTarget = lerp(1f, 0.5f, abs(distanceFromCenter))
             val isNearCenter = abs(distanceFromCenter) < 0.15f
 
-            val scale by animateFloatAsState(
-                targetValue = scaleTarget,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            )
-            val rotationY by animateFloatAsState(
-                targetValue = rotationTarget,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            )
-            val alpha by animateFloatAsState(
-                targetValue = alphaTarget,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            )
+//            val scale by animateFloatAsState(
+//                targetValue = scaleTarget,
+//                animationSpec = spring(
+//                    dampingRatio = Spring.DampingRatioNoBouncy,
+//                    stiffness = Spring.StiffnessMedium
+//                )
+//            )
+//            val rotationY by animateFloatAsState(
+//                targetValue = rotationTarget,
+//                animationSpec = spring(
+//                    dampingRatio = Spring.DampingRatioNoBouncy,
+//                    stiffness = Spring.StiffnessMedium
+//                )
+//            )
+//            val alpha by animateFloatAsState(
+//                targetValue = alphaTarget,
+//                animationSpec = spring(
+//                    dampingRatio = Spring.DampingRatioNoBouncy,
+//                    stiffness = Spring.StiffnessMedium
+//                )
+//            )
 
             Box(
                 modifier = Modifier
                     .width(itemWidth)
                     .height(itemWidth + 64.dp)
                     .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        this.rotationY = rotationY
-                        this.alpha = alpha
+                        scaleX = scaleTarget
+                        scaleY = scaleTarget
+                        this.rotationY = rotationTarget
+                        this.alpha = alphaTarget
                         cameraDistance = 12f * density
                     }
                     .combinedClickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onLongClick = { onLongSelect(song.id) },
+                        onLongClick = { onLongSelect(song) },
                         onClick = {
                             if (isNearCenter) {
-                                // tapping the centered cover = explicit play
-                                onTrackSelected(song.id)
+                                onTrackSelected(index)
                             } else {
-                                // tapping a side cover = just scroll it to center, no play
                                 coroutineScope.launch {
-                                    listState.animateScrollToItem(song.id)
+                                    listState.animateScrollToItem(index)
                                 }
                             }
                         }
@@ -195,8 +199,16 @@ fun AlbumArt(
 
             Text(
                 text = song.name,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = adaptiveTypography().bodyMedium
+            )
+
+            Text(
+                text = Formatter.formatTime(song.length) + " • " + playCountOf(song) + " plays",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = adaptiveTypography().bodySmall
             )
         }
     }

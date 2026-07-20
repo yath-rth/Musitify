@@ -6,11 +6,16 @@ import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
+import com.yatharth.musitify.data.entity.Song
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
 
 object SongMedia {
+
+    fun playCountOf(song: Song): Int =
+        (if (song.length != 0L) song.timeHeard.toDouble() / song.length else 0.0).roundToInt()
 
     fun createPlaylistCoverBitmap(
         artPaths: List<String>,

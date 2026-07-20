@@ -31,7 +31,8 @@ import java.io.File
 @Composable
 fun SongItemUI(
     song: Song,
-    onPlay: () -> Unit
+    onPlay: () -> Unit,
+    onLongPress: () -> Unit
 ) {
     val TAG = "SongItemUI"
 
@@ -40,7 +41,8 @@ fun SongItemUI(
     }
 
     CustomButton(
-        onClick = onPlay
+        onClick = onPlay,
+        onLongClick = onLongPress
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

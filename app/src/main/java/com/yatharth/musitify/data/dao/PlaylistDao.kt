@@ -19,9 +19,10 @@ interface PlaylistDao {
 
     @Query(
         """
-    SELECT p.*, COUNT(sp.songId) as numOfSongs
+    SELECT p.*, COUNT(sp.songId) as numOfSongs, SUM(song.length) as playlistLength 
     FROM Playlist p
     LEFT JOIN SongToPlaylist sp ON sp.playListId = p.id
+    LEFT JOIN Song song ON song.id = sp.songId
     GROUP BY p.id
     ORDER BY p.createdAt
     """
@@ -48,5 +49,8 @@ interface PlaylistDao {
 
     @Query("UPDATE Playlist SET timeHeard = timeHeard + :ms WHERE id = :id")
     suspend fun addListenTime(id: Int, ms: Long)
+
+    @Query("SELECT * FROM Playlist WHERE name = :name LIMIT 1")
+    suspend fun getPlaylistByName(name: String): Playlist?
 
 }

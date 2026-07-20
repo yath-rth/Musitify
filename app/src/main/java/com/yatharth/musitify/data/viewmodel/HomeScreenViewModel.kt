@@ -1,5 +1,6 @@
 package com.yatharth.musitify.data.viewmodel
 
+import android.R.attr.mode
 import android.content.Context
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
@@ -8,13 +9,17 @@ import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SongRepository
+import com.yatharth.musitify.ui.elements.SortMode
 import com.yatharth.musitify.util.SongMedia.cachePlaylistCover
+import com.yatharth.musitify.util.SongMedia.playCountOf
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -24,6 +29,7 @@ import java.io.File
 import javax.inject.Inject
 import kotlin.collections.take
 import kotlin.math.min
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
@@ -101,6 +107,41 @@ class HomeScreenViewModel @Inject constructor(
                 _state.value = PlaylistDialogUiState.Error(e.message ?: "Unknown error")
             }
         }
+    }
+
+    private val _sortMode = MutableStateFlow(SortMode.PLAYS_DESC)
+    val sortMode = _sortMode.asStateFlow()
+
+    fun onSortModeToggle() {
+        _sortMode.value = _sortMode.value.next()
+    }
+
+    val sortedSongs = combine(allSongs, _sortMode) { songs, mode ->
+        when (mode) {
+            SortMode.DOWNLOADED_DESC -> songs.sortedByDescending { it.downloadedAt }
+            SortMode.DOWNLOADED_ASC -> songs.sortedBy { it.downloadedAt }
+            SortMode.PLAYS_DESC -> songs.sortedByDescending { playCountOf(it) }
+            SortMode.PLAYS_ASC -> songs.sortedBy { playCountOf(it) }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    val searchResults = _searchQuery
+        .debounce(300.milliseconds)
+        .flatMapLatest { query ->
+            if (query.isBlank()) songRepository.allSongs
+            else songRepository.getFilteredSongs(query)
+        }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
+
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
     }
 
     fun resetState() {

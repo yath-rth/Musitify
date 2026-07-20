@@ -12,13 +12,19 @@ import kotlinx.coroutines.flow.Flow
 interface SongDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun addSong(song: Song)
+    suspend fun addSong(song: Song): Long
 
     @Query("SELECT * FROM Song ORDER BY downloadedAt")
     fun getAllSongs(): Flow<List<Song>>
 
+    @Query("SELECT * FROM Song WHERE length = 0 ORDER BY downloadedAt")
+    suspend fun getAllSongsWithoutLength(): List<Song>
+
     @Query("SELECT * FROM Song WHERE id = :id")
     suspend fun getSongById(id: Int): Song?
+
+    @Query("SELECT * FROM Song WHERE name = :name LIMIT 1")
+    suspend fun getSongByName(name: String): Song?
 
     @Query(
         """
@@ -30,10 +36,16 @@ interface SongDao {
     )
     suspend fun getSongsByIds(ids: List<Int>): List<Song>
 
+    @Query("SELECT * FROM Song WHERE name LIKE '%' || :query || '%' ORDER BY name")
+    fun searchSongs(query: String): Flow<List<Song>>
+
     @Query("DELETE FROM Song WHERE id = :id")
     suspend fun deleteSong(id: Int)
 
     @Query("UPDATE Song SET timeHeard = timeHeard + :ms WHERE id = :songId")
     suspend fun addListenTime(songId: Int, ms: Long)
+
+    @Query("UPDATE Song SET length = :length WHERE id = :songId")
+    suspend fun updateLength(songId: Int, length: Long)
 
 }

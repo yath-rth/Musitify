@@ -8,6 +8,7 @@ import com.chaquo.python.android.AndroidPlatform
 import com.yatharth.musitify.data.dao.SongDao
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.util.ConvertSong
+import com.yatharth.musitify.util.SongMedia
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -60,6 +61,8 @@ class SongRepository @Inject constructor(
 
     val allSongs = songDao.getAllSongs()
 
+    fun getFilteredSongs(query: String) = songDao.searchSongs(query)
+
     suspend fun deleteSong(id: Int) {
         val song = songDao.getSongById(id) ?: return
         val audioFile = File(song.filePath)
@@ -69,6 +72,15 @@ class SongRepository @Inject constructor(
         if (artFile.exists()) artFile.delete()
 
         songDao.deleteSong(id)
+    }
+
+    suspend fun fetchAllAndUpdate() {
+        val songs = songDao.getAllSongsWithoutLength()
+        songs.forEachIndexed { index, song ->
+            val length = SongMedia.getAudioDurationMs(song.filePath)
+            songDao.updateLength(song.id, length)
+        }
+        Log.d("Temp", "Completed migration like behaviour")
     }
 
 }

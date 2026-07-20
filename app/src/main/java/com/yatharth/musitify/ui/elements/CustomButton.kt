@@ -37,6 +37,7 @@ import com.yatharth.musitify.ui.theme.itemsBg
 fun CustomButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     bgColor: Color = itemsBg,
     content: @Composable () -> Unit = {},
 ) {
@@ -60,7 +61,8 @@ fun CustomButton(
                         tryAwaitRelease()
                         pressed = false
                     },
-                    onTap = { onClick() }
+                    onTap = { onClick() },
+                    onLongPress = { onLongClick() }
                 )
             },
     ) {
