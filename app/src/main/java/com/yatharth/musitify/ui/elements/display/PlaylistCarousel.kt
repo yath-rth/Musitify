@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -96,7 +98,7 @@ fun PlaylistCarousel(
             Box(
                 modifier = Modifier
                     .width(itemWidth)
-                    .aspectRatio(1f)
+                    .height(itemWidth + 64.dp)
                     .graphicsLayer {
                         scaleX = scale
                         scaleY = scale
@@ -136,13 +138,14 @@ fun PlaylistArt(
         modifier = modifier,
         shadowOffsetX = 0.dp,
         shadowOffsetY = 0.dp,
-        borderThickness = 5.dp
+        borderThickness = 6.dp,
+        rounding = 0
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .padding(12.dp)
-                .fillMaxHeight(),
-            contentAlignment = Alignment.Center
+//                .fillMaxHeight(),
+//            contentAlignment = Alignment.Center
         ) {
             playlist.playlist.artPath?.let {
                 AsyncImage(
@@ -150,51 +153,33 @@ fun PlaylistArt(
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .blur(
-                            radius = 1.dp
-                        ),
+                        .aspectRatio(1f),
                     contentScale = ContentScale.Crop
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.5f to Color.White.copy(alpha = 0.8f),
-                                1f to Color.White
-                            )
-                        )
-                    )
-                    .padding(12.dp)
-            ) {
-                Column {
-                    Text(
-                        text = playlist.playlist.name,
-                        color = text,
-                        style = adaptiveTypography().titleSmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+            Spacer(Modifier.height(8.dp))
 
-                    Text(
-                        text = "${playlist.numOfSongs} songs • ${
-                            Formatter.formatTimeToMinutes(
-                                playlist.playlistLength
-                            )
-                        }",
-                        color = text,
-                        style = adaptiveTypography().bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+            Text(
+                text = playlist.playlist.name,
+                color = text,
+                style = adaptiveTypography().bodyLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = "${playlist.numOfSongs} songs • ${
+                    Formatter.formatTimeToMinutes(
+                        playlist.playlistLength
                     )
-                }
-            }
+                }",
+                color = text,
+                style = adaptiveTypography().bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

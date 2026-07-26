@@ -181,10 +181,11 @@ fun AlbumArt(
         modifier = modifier,
         shadowOffsetX = 0.dp,
         shadowOffsetY = 0.dp,
-        borderThickness = 5.dp
+        borderThickness = 6.dp,
+        rounding = 1
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier.padding(14.dp)
         ) {
             AsyncImage(
                 model = artwork,

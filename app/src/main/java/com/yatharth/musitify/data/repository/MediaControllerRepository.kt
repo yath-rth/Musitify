@@ -65,6 +65,7 @@ class MediaControllerRepository @Inject constructor(
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
         controllerFuture?.addListener({
             val mc = controllerFuture?.get() ?: return@addListener
+            mc.repeatMode = Player.REPEAT_MODE_ALL
             _controller.value = mc
             _uiState.update { it.copy(repeatMode = mc.repeatMode, isPlaying = mc.isPlaying) }
             attachListener(mc)
@@ -88,7 +89,7 @@ class MediaControllerRepository @Inject constructor(
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 flushListenTime()
                 lastTrackedSongId =
-                    mediaItem?.mediaMetadata?.extras?.getInt("songId") // see note below
+                    mediaItem?.mediaMetadata?.extras?.getInt("songId")
                 accumulatedMs = 0
                 lastPositionMs = 0
 
@@ -110,9 +111,8 @@ class MediaControllerRepository @Inject constructor(
         listenTrackingJob?.cancel()
         listenTrackingJob = scope.launch {
             while (isActive) {
-                delay(7.seconds) // your 5-10s window, pick a number
+                delay(7.seconds)
                 val currentPos = mc.currentPosition
-                // guard against seeks/skips inflating the delta
                 val delta = (currentPos - lastPositionMs).coerceIn(0, 15_000)
                 accumulatedMs += delta
                 lastPositionMs = currentPos
