@@ -45,7 +45,7 @@ fun CustomButton(
 
     val offset by animateDpAsState(
         targetValue = if (pressed) 2.dp else 0.dp,
-        animationSpec = tween(50),
+        animationSpec = tween(20),
         label = ""
     )
 
@@ -103,14 +103,15 @@ fun CustomButton(
 fun CustomCircularButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     bgColor: Color = itemsBg,
     content: @Composable () -> Unit = {},
 ) {
     var pressed by remember { mutableStateOf(false) }
 
     val offset by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        animationSpec = tween(50),
+        targetValue = if (pressed) 3.dp else 0.dp,
+        animationSpec = tween(20),
         label = ""
     )
 
@@ -118,7 +119,6 @@ fun CustomCircularButton(
         modifier = modifier
             .wrapContentSize()
             .animateContentSize()
-            .padding(8.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
@@ -126,14 +126,16 @@ fun CustomCircularButton(
                         tryAwaitRelease()
                         pressed = false
                     },
-                    onTap = { onClick() }
+                    onTap = { onClick() },
+                    onLongPress = { onLongClick() }
                 )
-            },
+            }
+            .padding(8.dp),
     ) {
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .offset(x = 2.dp, y = 2.dp)
+                .offset(x = 3.dp, y = 3.dp)
                 .background(
                     shape = CircleShape,
                     color = cardBorder

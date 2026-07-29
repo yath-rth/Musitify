@@ -106,37 +106,15 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.End
             ) {
-                Row(
-
-                ) {
-                    CustomButton(
-                        onClick = { showAddDialog = true }
-                    ) {
-                        Text(
-                            text = "Add Songs",
-                            color = text,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-
-                    CustomButton(
-                        onClick = { showPlaylistDialog = true }
-                    ) {
-                        Text(
-                            text = "Add Playlist",
-                            color = text,
-                            modifier = Modifier.padding(8.dp)
-                        )
-                    }
-                }
-
                 PlaybackControls(
                     modifier = Modifier.fillMaxWidth(),
                     uiState = uiState,
                     onBack = { playbackControllerViewModel.previous() },
                     onPause = { playbackControllerViewModel.pause() },
                     onNext = { playbackControllerViewModel.next() },
-                    onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() }
+                    onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
+                    addSong = { showAddDialog = true },
+                    createPlaylist = { showPlaylistDialog = true }
                 )
             }
         }

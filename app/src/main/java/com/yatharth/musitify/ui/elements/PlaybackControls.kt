@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Pause
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.RepeatOne
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -33,6 +35,8 @@ fun PlaybackControls(
     onBack: () -> Unit,
     onPause: () -> Unit,
     onNext: () -> Unit,
+    addSong: () -> Unit,
+    createPlaylist: () -> Unit,
     onRepeatToggle: () -> Unit
 ) {
 
@@ -42,15 +46,16 @@ fun PlaybackControls(
         else -> Icons.Outlined.Repeat
     }
 
-    Column(
-        modifier = modifier.padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ShadowBox(
+            modifier = modifier.padding(8.dp)
     ) {
-        ShadowBox(
-//            modifier = Modifier.padding(8.dp)
+        Column(
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             FillBar(
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(horizontal = 8.dp),
                 label = uiState.currentTitle,
                 value = uiState.positionMs.toDouble(),
                 max = uiState.durationMs.toDouble(),
@@ -62,16 +67,12 @@ fun PlaybackControls(
                     }"
                 else null
             )
-        }
 
-        ShadowBox(
-//            modifier = Modifier.padding(8.dp)
-        ) {
             Row(
-
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 CustomCircularButton(
-                    modifier = Modifier.weight(1f),
                     onClick = onBack,
                 ) {
                     Icon(
@@ -82,7 +83,6 @@ fun PlaybackControls(
                 }
 
                 CustomCircularButton(
-                    modifier = Modifier.weight(1f),
                     onClick = onPause,
                 ) {
                     Icon(
@@ -93,7 +93,6 @@ fun PlaybackControls(
                 }
 
                 CustomCircularButton(
-                    modifier = Modifier.weight(1f),
                     onClick = onNext,
                 ) {
                     Icon(
@@ -104,13 +103,23 @@ fun PlaybackControls(
                 }
 
                 CustomCircularButton(
-                    modifier = Modifier.weight(1f),
                     onClick = onRepeatToggle,
                 ) {
                     Icon(
                         imageVector = repeatIcon,
                         contentDescription = null,
                         tint = if (uiState.repeatMode == 0) cardBorder.copy(alpha = 0.5f) else cardBorder
+                    )
+                }
+
+                CustomCircularButton(
+                    onClick = addSong,
+                    onLongClick = createPlaylist
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Add,
+                        contentDescription = null,
+                        tint = cardBorder
                     )
                 }
             }
