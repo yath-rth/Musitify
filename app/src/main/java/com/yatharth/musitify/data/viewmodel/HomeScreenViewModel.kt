@@ -1,8 +1,5 @@
 package com.yatharth.musitify.data.viewmodel
 
-import android.R.attr.mode
-import android.content.Context
-import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yatharth.musitify.data.entity.Playlist
@@ -10,25 +7,19 @@ import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SongRepository
 import com.yatharth.musitify.ui.elements.SortMode
-import com.yatharth.musitify.util.SongMedia.cachePlaylistCover
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
-import kotlin.collections.take
-import kotlin.math.min
 import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
@@ -77,15 +68,15 @@ class HomeScreenViewModel @Inject constructor(
     private val _state = MutableStateFlow<PlaylistDialogUiState>(PlaylistDialogUiState.Idle)
     val state: StateFlow<PlaylistDialogUiState> = _state.asStateFlow()
 
-    fun createPlaylistWithSongs(name: String, songIds: Set<Int>) {
-        if (name.isBlank() || songIds.isEmpty()) {
+    fun createPlaylistWithSongs(name: String, songs: Set<Song>) {
+        if (name.isBlank() || songs.isEmpty()) {
             _state.value = PlaylistDialogUiState.Error("Name and at least one song required")
             return
         }
         viewModelScope.launch {
             _state.value = PlaylistDialogUiState.Loading
             try {
-                playlistRepository.createPlaylist(name, songIds.toList())
+                playlistRepository.createPlaylist(name, songs.toList())
                 _state.value = PlaylistDialogUiState.Success
             } catch (e: Exception) {
                 _state.value = PlaylistDialogUiState.Error(e.message ?: "Unknown error")
@@ -93,15 +84,15 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    fun addSongsToPlaylist(playlist: Playlist, songIds: Set<Int>) {
-        if (songIds.isEmpty()) {
+    fun addSongsToPlaylist(playlist: Playlist, songs: Set<Song>) {
+        if (songs.isEmpty()) {
             _state.value = PlaylistDialogUiState.Error("Select at least one song")
             return
         }
         viewModelScope.launch {
             _state.value = PlaylistDialogUiState.Loading
             try {
-                playlistRepository.addSongsToPlaylist(playlist.id, songIds.toList())
+                playlistRepository.addSongsToPlaylist(playlist.id, songs.toList())
                 _state.value = PlaylistDialogUiState.Success
             } catch (e: Exception) {
                 _state.value = PlaylistDialogUiState.Error(e.message ?: "Unknown error")

@@ -14,8 +14,14 @@ interface SongDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addSong(song: Song): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addSongs(song: List<Song>)
+
     @Query("SELECT * FROM Song ORDER BY downloadedAt")
     fun getAllSongs(): Flow<List<Song>>
+
+    @Query("SELECT * FROM Song ORDER BY downloadedAt")
+    suspend fun getAllSongsSuspend(): List<Song>
 
     @Query("SELECT * FROM Song WHERE length = 0 ORDER BY downloadedAt")
     suspend fun getAllSongsWithoutLength(): List<Song>

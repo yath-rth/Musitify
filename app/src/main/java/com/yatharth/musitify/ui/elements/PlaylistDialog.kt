@@ -56,7 +56,7 @@ fun PlaylistDialog(
 
     // Song selection (used in both modes)
     allSongs: List<Song>,
-    selectedSongIds: Set<Int>,
+    selectedSongIds: Set<Song>,
     onToggleSong: (Song) -> Unit,
 
     state: PlaylistDialogUiState,
@@ -173,7 +173,7 @@ fun PlaylistDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Checkbox(
-                                checked = selectedSongIds.contains(song.id),
+                                checked = selectedSongIds.contains(song),
                                 onCheckedChange = { onToggleSong(song) },
                                 colors = checkBoxColors()
                             )

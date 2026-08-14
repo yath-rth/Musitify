@@ -5,6 +5,10 @@ import androidx.room.Room
 import com.yatharth.musitify.data.dao.PlaylistDao
 import com.yatharth.musitify.data.dao.SongDao
 import com.yatharth.musitify.data.dao.SongToPlaylistDao
+import com.yatharth.musitify.data.migrations.MIGRATION_1_2
+import com.yatharth.musitify.data.migrations.MIGRATION_2_3
+import com.yatharth.musitify.data.migrations.MIGRATION_3_4
+import com.yatharth.musitify.util.UUIDConverter
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,7 +30,9 @@ object DatabaseModule {
             context,
             MusitifyDatabase::class.java,
             "musitify_database"
-        ).build()
+        )
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .build()
     }
 
     @Provides

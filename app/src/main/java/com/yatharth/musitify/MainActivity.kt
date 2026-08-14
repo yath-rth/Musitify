@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
+import com.yatharth.musitify.data.migrations.IdGenerator
 import com.yatharth.musitify.ui.theme.MusitifyTheme
 import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SongRepository
@@ -26,12 +27,9 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     private val TAG = "MainActivity"
-
-    @Inject
-    lateinit var songRepository: SongRepository
-
-    @Inject
-    lateinit var playlistRepository: PlaylistRepository
+    @Inject lateinit var songRepository: SongRepository
+    @Inject lateinit var playlistRepository: PlaylistRepository
+    @Inject lateinit var idGenerator: IdGenerator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

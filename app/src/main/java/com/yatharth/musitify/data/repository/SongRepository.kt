@@ -1,5 +1,6 @@
 package com.yatharth.musitify.data.repository
 
+import android.R.attr.name
 import android.content.Context
 import android.util.Log
 import androidx.compose.ui.input.key.Key.Companion.F
@@ -13,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,16 +44,20 @@ class SongRepository @Inject constructor(
             )
             val songName = convertSong.invoke(result)
             val durationSeconds = result["duration"]?.toLong()
+            val artist = result?.callAttr("get", "artist")?.toString() ?: "unknown"
             val durationMs = durationSeconds?.times(1000)
 
             songDao.addSong(
                 Song(
                     name = songName,
+                    artist = artist,
                     length = durationMs ?: 0,
                     timeHeard = 0,
                     filePath = applicationContext.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.mp3",
                     artPath = applicationContext.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.webp",
                     downloadedAt = System.currentTimeMillis(),
+                    url = url,
+                    uuid = UUID.randomUUID()
                 )
             )
         } catch (e: Exception) {

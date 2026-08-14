@@ -18,7 +18,6 @@ def downloadSong(url, output_path, retries=3, delay=3):
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-
                 audio_path = ydl.prepare_filename(info)
                 base = os.path.splitext(audio_path)[0]
 
@@ -31,6 +30,7 @@ def downloadSong(url, output_path, retries=3, delay=3):
 
                 return {
                     "audio": audio_path,
+                    "artist": info["artist"],
                     "thumbnail": thumbnail_path,
                     "duration": info.get("duration")
                 }

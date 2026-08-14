@@ -17,6 +17,9 @@ interface PlaylistDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addPlaylist(playlist: Playlist): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addPlaylists(playlist: List<Playlist>)
+
     @Query(
         """
     SELECT p.*, COUNT(sp.songId) as numOfSongs, SUM(song.length) as playlistLength 
@@ -28,6 +31,14 @@ interface PlaylistDao {
     """
     )
     fun getAllPlaylists(): Flow<List<PlaylistInfo>>
+
+    @Query(
+        """
+    SELECT p.*
+    FROM Playlist p
+    """
+    )
+    suspend fun getAllPlaylistsSuspend(): List<Playlist>
 
     @Update
     suspend fun updatePlaylist(playlist: Playlist)

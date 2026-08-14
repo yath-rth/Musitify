@@ -7,7 +7,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -20,15 +22,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.yatharth.musitify.R
 import com.yatharth.musitify.data.entity.Song
+import com.yatharth.musitify.ui.elements.MusicRecord
+import java.util.UUID
 
 @Composable
 fun PlaybackScreen(
-    song: Song
+    modifier: Modifier = Modifier,
+    song: Song,
+    imageSize: Int = 85,
 ) {
     val infinite = rememberInfiniteTransition()
 
@@ -44,43 +53,33 @@ fun PlaybackScreen(
     )
 
     Box(
-        modifier = Modifier.graphicsLayer {
+        modifier = modifier.graphicsLayer {
             rotationZ = rotation
         },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(
-            modifier = Modifier
-                .size(280.dp)
-        ) {
-            val radius = size.minDimension / 2
-
-            drawCircle(
-                color = Color.Black,
-                radius = radius
-            )
-
-            repeat(15) { i ->
-                drawCircle(
-                    color = Color.DarkGray.copy(alpha = 0.35f),
-                    radius = radius - i * 8f,
-                    style = Stroke(width = 1f)
-                )
-            }
-
-            drawCircle(
-                color = Color.Gray,
-                radius = radius * 0.22f
-            )
-        }
-
-        AsyncImage(
-            model = song.artPath,
-            contentDescription = null,
-            modifier = Modifier
-                .size(90.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
+        MusicRecord(
+            song = song,
+            imageSize = imageSize
         )
     }
+}
+
+@Preview
+@Composable
+fun PlaybackScreenPreview() {
+    PlaybackScreen(
+        song = Song(
+            id = 1,
+            name = "Blinding Lights",
+            length = 200_000L,
+            filePath = "",
+            artPath = "",
+            timeHeard = 0,
+            downloadedAt = 0L,
+            url = "",
+            artist = "The Weeknd",
+            uuid = UUID.randomUUID()
+        )
+    )
 }

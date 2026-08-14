@@ -28,12 +28,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key.Companion.I
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.common.collect.Multimaps.index
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.PlaylistInfo
+import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.viewmodel.AddSongsViewModel
 import com.yatharth.musitify.data.viewmodel.HomeScreenViewModel
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
@@ -75,7 +77,7 @@ fun HomeScreen(
     var isAddToExistingMode by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
     val songFilterQuery by homeScreenViewModel.searchQuery.collectAsState()
-    var selectedSongIds by remember { mutableStateOf(setOf<Int>()) }
+    var selectedSongIds by remember { mutableStateOf(setOf<Song>()) }
 
     val playlists by homeScreenViewModel.playlists.collectAsState()
     val playlistState by homeScreenViewModel.state.collectAsState()
@@ -96,7 +98,7 @@ fun HomeScreen(
     ) {
         homeScreenViewModel.clearSelectedPlaylist()
     }
-
+    
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
@@ -204,9 +206,9 @@ fun HomeScreen(
                 AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
                     MusicCarousel(
                         songs = allSongs,
-                        size = 140,
-                        spacing = -5,
-                        threshold = 0.5f,
+//                        size = 140,
+//                        spacing = -5,
+//                        threshold = 0.5f,
                         scroll = false,
                         currentPlayingIndex = allSongs.indexOfFirst { it.name == uiState.currentTitle }
                             .coerceAtLeast(0),
@@ -223,6 +225,16 @@ fun HomeScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
+                    )
+                }
+            }
+
+            item {
+                uiState.currentTitle?.let {
+                    PlaybackScreen(
+                        modifier = Modifier.fillMaxWidth(),
+                        song = allSongs[allSongs.indexOfFirst { song -> song.name == it }
+                            .coerceAtLeast(0)]
                     )
                 }
             }
@@ -318,8 +330,8 @@ fun HomeScreen(
                 allSongs = filteredSongs,
                 selectedSongIds = selectedSongIds,
                 onToggleSong = { song ->
-                    selectedSongIds = if (selectedSongIds.contains(song.id))
-                        selectedSongIds - song.id else selectedSongIds + song.id
+                    selectedSongIds = if (selectedSongIds.contains(song))
+                        selectedSongIds - song else selectedSongIds + song
                 },
                 state = playlistState,
                 onSubmit = {

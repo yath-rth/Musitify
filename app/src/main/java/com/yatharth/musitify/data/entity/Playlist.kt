@@ -3,6 +3,7 @@ package com.yatharth.musitify.data.entity
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity
 data class Playlist(
@@ -10,7 +11,8 @@ data class Playlist(
     val name: String,
     val timeHeard: Int,
     val artPath: String? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    var uuid: UUID? = null
 )
 
 data class PlaylistInfo(

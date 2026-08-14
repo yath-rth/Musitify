@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(
     foreignKeys = [
@@ -27,4 +28,6 @@ data class SongToPlaylist(
     val playListId: Int,
     val position: Int,
     val addedOn: Long,
+    var song_uuid: UUID? = null,
+    var playlist_uuid: UUID? = null
 )

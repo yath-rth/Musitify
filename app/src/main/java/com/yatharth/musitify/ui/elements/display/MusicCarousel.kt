@@ -101,28 +101,6 @@ fun MusicCarousel(
             val alphaTarget = lerp(1f, 0.5f, abs(distanceFromCenter))
             val isNearCenter = abs(distanceFromCenter) < 0.15f
 
-//            val scale by animateFloatAsState(
-//                targetValue = scaleTarget,
-//                animationSpec = spring(
-//                    dampingRatio = Spring.DampingRatioNoBouncy,
-//                    stiffness = Spring.StiffnessMedium
-//                )
-//            )
-//            val rotationY by animateFloatAsState(
-//                targetValue = rotationTarget,
-//                animationSpec = spring(
-//                    dampingRatio = Spring.DampingRatioNoBouncy,
-//                    stiffness = Spring.StiffnessMedium
-//                )
-//            )
-//            val alpha by animateFloatAsState(
-//                targetValue = alphaTarget,
-//                animationSpec = spring(
-//                    dampingRatio = Spring.DampingRatioNoBouncy,
-//                    stiffness = Spring.StiffnessMedium
-//                )
-//            )
-
             Box(
                 modifier = Modifier
                     .width(itemWidth)
