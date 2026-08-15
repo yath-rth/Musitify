@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
 
 //        lifecycleScope.launch {
 //            playlistRepository.downloadPlaylist(
-//                playlistUrl = "https://youtube.com/playlist?list=PLD6E8F044EE05317D&si=He1Zo1el-P5N0Wk0",
+//                playlistUrl = "https://youtube.com/playlist?list=PLE6nDyTGs1nw&si=K6fr7dNUDKDeWwkt",
 //                outputDir = applicationContext.getExternalFilesDir(null)?.absolutePath
 //            )
 //        }

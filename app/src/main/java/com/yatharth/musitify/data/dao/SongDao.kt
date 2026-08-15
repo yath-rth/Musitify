@@ -32,6 +32,9 @@ interface SongDao {
     @Query("SELECT * FROM Song WHERE name = :name LIMIT 1")
     suspend fun getSongByName(name: String): Song?
 
+    @Query("SELECT * FROM Song WHERE url = :url")
+    suspend fun getSongByUrl(url: String): Song?
+
     @Query(
         """
         SELECT *

@@ -6,6 +6,7 @@ import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SongRepository
+import com.yatharth.musitify.network.SyncController
 import com.yatharth.musitify.ui.elements.SortMode
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +27,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class HomeScreenViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val playlistRepository: PlaylistRepository,
+    private val syncController: SyncController
 ) : ViewModel() {
 
     val allSongs = songRepository.allSongs.stateIn(
@@ -76,7 +78,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = PlaylistDialogUiState.Loading
             try {
-                playlistRepository.createPlaylist(name, songs.toList())
+                playlistRepository.createPlaylist(name, songs.associateBy { it.id })
                 _state.value = PlaylistDialogUiState.Success
             } catch (e: Exception) {
                 _state.value = PlaylistDialogUiState.Error(e.message ?: "Unknown error")
@@ -92,7 +94,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = PlaylistDialogUiState.Loading
             try {
-                playlistRepository.addSongsToPlaylist(playlist.id, songs.toList())
+                playlistRepository.addSongsToPlaylist(playlist, songs.associateBy { it.id })
                 _state.value = PlaylistDialogUiState.Success
             } catch (e: Exception) {
                 _state.value = PlaylistDialogUiState.Error(e.message ?: "Unknown error")
@@ -154,6 +156,12 @@ class HomeScreenViewModel @Inject constructor(
     fun deletePlaylist(index: Int) {
         viewModelScope.launch {
             playlistRepository.deletePlaylist(id = index)
+        }
+    }
+
+    fun syncLibrary() {
+        viewModelScope.launch {
+            syncController.syncData()
         }
     }
 }

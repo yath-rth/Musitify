@@ -8,6 +8,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.yatharth.musitify.data.dao.SongDao
 import com.yatharth.musitify.data.entity.Song
+import com.yatharth.musitify.data.entity.SongToPlaylist
 import com.yatharth.musitify.util.ConvertSong
 import com.yatharth.musitify.util.SongMedia
 import dagger.hilt.android.qualifiers.ApplicationContext

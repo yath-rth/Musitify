@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
+import com.google.common.io.Files.map
 import com.yatharth.musitify.data.dao.PlaylistDao
 import com.yatharth.musitify.data.dao.SongDao
 import com.yatharth.musitify.data.dao.SongToPlaylistDao
@@ -60,7 +61,7 @@ class PlaylistRepository @Inject constructor(
         val completedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val semaphore = Semaphore(maxConcurrent)
 
-        val songs: List<Song?> = urls.map { url ->
+        val songs: Map<Int, Song?> = urls.map { url ->
             async(Dispatchers.IO) {
                 semaphore.withPermit {
                     try {
@@ -84,7 +85,7 @@ class PlaylistRepository @Inject constructor(
                         )
 
                         val insertedId = songDao.addSong(song)
-                        song
+                        Pair(insertedId.toInt(), song)
                     } catch (e: Exception) {
                         Log.e(TAG, e.message ?: "Error somewhere")
                         null
@@ -95,11 +96,13 @@ class PlaylistRepository @Inject constructor(
                 }
             }
         }.awaitAll()
+            .filterNotNull()
+            .toMap()
 
-        val validSongs = songs.filterNotNull()
+        val validSongs = songs.filter { it.value != null }
 
         if (validSongs.isNotEmpty()) {
-            createPlaylist(playlistName, validSongs)
+            createPlaylist(playlistName, validSongs as Map<Int, Song>)
             Log.d(TAG, "Created playlist '$playlistName' with ${validSongs.size} songs")
         } else {
             Log.e(TAG, "No songs downloaded successfully, skipping playlist creation")
@@ -108,14 +111,14 @@ class PlaylistRepository @Inject constructor(
         completedCount.get()
     }
 
-    suspend fun createPlaylist(name: String, songs: List<Song>) = withContext(Dispatchers.IO) {
+    suspend fun createPlaylist(name: String, songs: Map<Int, Song>) = withContext(Dispatchers.IO) {
         val existing = playlistDao.getPlaylistByName(name)
 
         val playlistId: Int
         if (existing != null) {
             Log.d(TAG, "Playlist '$name' already exists, adding songs to it")
             playlistId = existing.id
-            addSongsToPlaylist(playlistId, songs)
+            addSongsToPlaylist(existing, songs)
         } else {
             val playlist = Playlist(
                 name = name,
@@ -125,10 +128,10 @@ class PlaylistRepository @Inject constructor(
             )
             val id = playlistDao.addPlaylist(playlist)
             playlistId = id.toInt()
-            addSongsToPlaylist(playlistId, songs)
+            addSongsToPlaylist(playlist, songs)
         }
 
-        val songs = songDao.getSongsByIds(songs.map { it.id })
+        val songs = songDao.getSongsByIds(songs.keys.toList())
         val art = getOrCreatePlaylistCover(playlistId, songs)
         playlistDao.updatePlaylist(
             (
@@ -166,20 +169,57 @@ class PlaylistRepository @Inject constructor(
         )
     }
 
-    suspend fun addSongsToPlaylist(playlistId: Int, songs: List<Song>) {
-        val position = songToPlaylistDao.getLastPosition(playlistId) + 1
+    suspend fun addSongsToPlaylist(playlist: Playlist, songs: Map<Int, Song>) {
+        // Validate that playlist exists
+        val existingPlaylist = playlistDao.getPlaylistByName(playlist.name) ?: run {
+            throw IllegalStateException("Playlist with name '$playlist.name' not found in database")
+        }
 
-        songToPlaylistDao.addSongsToPlaylist(
-            songs.mapIndexed { i, song ->
-                SongToPlaylist(
-                    songId = song.id,
-                    playListId = playlistId,
-                    position = position + i,
-                    addedOn = System.currentTimeMillis(),
-                    song_uuid = song.uuid
-                )
-            }
-        )
+        Log.d("Test", songs.toString())
+        val validSongs = songs.filter { song ->
+            songDao.getSongById(song.key) != null
+        }.ifEmpty {
+            throw IllegalStateException("No valid songs to add. All referenced songs may have been deleted.")
+        }
+
+        if (existingPlaylist.id != playlist.id) {
+            // Use existing playlist ID instead of the one from the parameter
+            val position = songToPlaylistDao.getLastPosition(existingPlaylist.id) + 1
+
+            songToPlaylistDao.addSongsToPlaylist(
+                validSongs.keys.mapIndexed { i, songId ->
+                    SongToPlaylist(
+                        songId = songId,
+                        playListId = existingPlaylist.id,
+                        position = position + i,
+                        addedOn = System.currentTimeMillis(),
+                        song_uuid = songs[songId]?.uuid,
+                        playlist_uuid = playlist.uuid ?: existingPlaylist.uuid
+                    )
+                }
+            )
+        } else {
+            // Playlist is new or parameter was correct
+            val position = songToPlaylistDao.getLastPosition(playlist.id) + 1
+
+            songToPlaylistDao.addSongsToPlaylist(
+                validSongs.keys.mapIndexed { i, songId ->
+                    SongToPlaylist(
+                        songId = songId,
+                        playListId = playlist.id,
+                        position = position + i,
+                        addedOn = System.currentTimeMillis(),
+                        song_uuid = songs[songId]?.uuid,
+                        playlist_uuid = playlist.uuid
+                    )
+                }
+            )
+        }
+    }
+
+
+    suspend fun getAllSongRelations(): List<SongToPlaylist> {
+        return songToPlaylistDao.getAll()
     }
 
     val allPlaylists = playlistDao.getAllPlaylists()

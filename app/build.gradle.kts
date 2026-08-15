@@ -4,6 +4,7 @@ plugins {
     id("com.chaquo.python")
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.10"
 }
 
 android {
@@ -85,8 +86,12 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-extended")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+
     implementation("androidx.media3:media3-exoplayer:1.10.1") //Both of these are used to
     implementation("androidx.media3:media3-session:1.10.1") //access and provide android's media interface
 
     implementation("io.coil-kt:coil-compose:2.7.0") // To load the images properly in the background
+
+    implementation("com.squareup.okhttp3:okhttp:5.4.0") // For http calls
 }

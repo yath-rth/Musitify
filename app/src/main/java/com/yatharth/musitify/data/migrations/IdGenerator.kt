@@ -33,17 +33,32 @@ class IdGenerator @Inject constructor(
         val songMap = songs.associateBy { it.id }
         val playlistMap = playlists.associateBy { it.id }
 
-        relations.forEach {
-            val playlist = playlistMap[it.playListId]
-            val song = songMap[it.songId]
+        relations.forEach { relation ->
+            val playlist = playlistMap[relation.playListId] ?: run {
+                // Remove orphaned relations where playlist was deleted
+                songToPlaylistDao.remove(relation.songId, relation.playListId)
+                return@forEach
+            }
 
-            it.song_uuid = song?.uuid
-            it.playlist_uuid = playlist?.uuid
+            val song = songMap[relation.songId] ?: run {
+                // Remove orphaned relations where song was deleted
+                songToPlaylistDao.remove(relation.songId, relation.playListId)
+                return@forEach
+            }
+
+            relation.song_uuid = song.uuid
+            relation.playlist_uuid = playlist.uuid
         }
 
         songDao.addSongs(songs)
         playlistDao.addPlaylists(playlists)
-        songToPlaylistDao.addSongsToPlaylist(relations)
+        // Only add relations that passed validation above
+        val validRelations = relations.filter { relation ->
+            playlistMap[relation.playListId] != null && songMap[relation.songId] != null
+        }
+        if (validRelations.isNotEmpty()) {
+            songToPlaylistDao.addSongsToPlaylist(validRelations)
+        }
     }
 
 }

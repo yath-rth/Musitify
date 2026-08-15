@@ -28,9 +28,16 @@ def downloadSong(url, output_path, retries=3, delay=3):
                         thumbnail_path = path
                         break
 
+                artist = (
+                        info.get("artist")
+                        or info.get("album_artist")
+                        or info.get("uploader")
+                        or "Unknown Artist"
+                )
+
                 return {
                     "audio": audio_path,
-                    "artist": info["artist"],
+                    "artist": artist,
                     "thumbnail": thumbnail_path,
                     "duration": info.get("duration")
                 }

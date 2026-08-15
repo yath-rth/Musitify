@@ -12,11 +12,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,6 +48,7 @@ import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
 import com.yatharth.musitify.ui.elements.AddSongDialog
 import com.yatharth.musitify.ui.elements.CustomAlertBox
 import com.yatharth.musitify.ui.elements.CustomButton
+import com.yatharth.musitify.ui.elements.CustomCircularButton
 import com.yatharth.musitify.ui.elements.CustomSwitch
 import com.yatharth.musitify.ui.elements.display.MusicCarousel
 import com.yatharth.musitify.ui.elements.PlaybackControls
@@ -98,14 +105,14 @@ fun HomeScreen(
     ) {
         homeScreenViewModel.clearSelectedPlaylist()
     }
-    
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
         containerColor = background,
         bottomBar = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
                 horizontalAlignment = Alignment.End
             ) {
                 PlaybackControls(
@@ -119,10 +126,23 @@ fun HomeScreen(
                     createPlaylist = { showPlaylistDialog = true }
                 )
             }
+        },
+        floatingActionButton = {
+            CustomCircularButton(
+                modifier = Modifier.size(56.dp),
+                onClick = { homeScreenViewModel.syncLibrary() },
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Sync,
+                    contentDescription = "Sync your library",
+                    modifier = Modifier.size(56.dp)
+                )
+            }
         }
     ) { innerPadding ->
         LazyColumn(
             modifier = modifier
+                .navigationBarsPadding()
                 .padding(innerPadding)
                 .padding(8.dp)
         ) {
