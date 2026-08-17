@@ -2,6 +2,7 @@ package com.yatharth.musitify.network
 
 import android.util.Log
 import com.yatharth.musitify.data.repository.PlaylistRepository
+import com.yatharth.musitify.data.repository.SettingsRepository
 import com.yatharth.musitify.data.repository.SongRepository
 import com.yatharth.musitify.network.model.MPlaylist_Song
 import com.yatharth.musitify.network.model.MUser_Song
@@ -20,11 +21,13 @@ import javax.inject.Singleton
 import kotlinx.serialization.json.Json
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.util.UUID
 
 @Singleton
 class SyncController @Inject constructor(
     val songRepository: SongRepository,
-    val playlistRepository: PlaylistRepository
+    val playlistRepository: PlaylistRepository,
+    val settingsRepository: SettingsRepository
 ) {
     private val TAG = "SyncController"
     private val client = OkHttpClient()
@@ -33,7 +36,11 @@ class SyncController @Inject constructor(
 
     suspend fun syncData() {
         Log.d(TAG, "Syncing data...")
-        val user_id = "Yatharth"
+        val device_id : String = settingsRepository.getSettingByName("device_id")?.value ?: run {
+            val id = UUID.randomUUID().toString()
+            settingsRepository.insertSetting("device_id", id)
+            id
+        }
 
         val songs = songRepository.allSongs
         val songList = songs.first().map {
@@ -45,18 +52,9 @@ class SyncController @Inject constructor(
             )
         }
 
-        val likedSongsList = songs.first().map {
-            MUser_Song(
-                user_id = user_id,
-                song_id = it.uuid.toString(),
-                liked_on = it.downloadedAt
-            )
-        }
-
         val playlists = playlistRepository.allPlaylists.first().map {
             NPlaylist(
                 id = it.playlist.uuid.toString(),
-                user_id = user_id,
                 name = it.playlist.name,
                 created_on = it.playlist.createdAt
             )
@@ -71,12 +69,10 @@ class SyncController @Inject constructor(
         }
 
         val syncPayload = SyncLibraryPayload(
-            device_id = "12345",
-            user_id = user_id,
+            device_id = device_id,
             songs = songList,
             playlists = playlists,
             playlist_songs = user_playlists,
-            liked_songs = likedSongsList,
         )
 
 

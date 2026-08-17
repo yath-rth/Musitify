@@ -6,7 +6,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class NPlaylist(
     val id : String,
-    val user_id: String,
     val name: String,
     val created_on: Long
 )

@@ -43,8 +43,9 @@ class SongRepository @Inject constructor(
                 url,
                 applicationContext.getExternalFilesDir(null)?.absolutePath
             )
-            val songName = convertSong.invoke(result)
-            val durationSeconds = result["duration"]?.toLong()
+            val songPath = convertSong.invoke(result)
+            val songName = result?.callAttr("get", "title")?.toString() ?: "unknown"
+            val durationSeconds = result?.callAttr("get", "duration")?.toLong()
             val artist = result?.callAttr("get", "artist")?.toString() ?: "unknown"
             val durationMs = durationSeconds?.times(1000)
 
@@ -54,8 +55,8 @@ class SongRepository @Inject constructor(
                     artist = artist,
                     length = durationMs ?: 0,
                     timeHeard = 0,
-                    filePath = applicationContext.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.mp3",
-                    artPath = applicationContext.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.webp",
+                    filePath = applicationContext.getExternalFilesDir(null)?.absolutePath + File.separator + "$songPath.mp3",
+                    artPath = applicationContext.getExternalFilesDir(null)?.absolutePath + File.separator + "$songPath.webp",
                     downloadedAt = System.currentTimeMillis(),
                     url = url,
                     uuid = UUID.randomUUID()
