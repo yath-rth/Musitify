@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.accentColor1
 import com.yatharth.musitify.ui.theme.cardBorder
@@ -67,7 +68,7 @@ fun FillBar(
                     text = label,
                     color = text,
                     style = adaptiveTypography().bodySmall,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Normal,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
                     modifier = Modifier.weight(1f)
@@ -79,9 +80,10 @@ fun FillBar(
             if (secondaryLabel != null) {
                 Text(
                     text = secondaryLabel,
-                    color = text,
-                    style = adaptiveTypography().bodySmall,
-                    fontWeight = FontWeight.SemiBold,
+                    color = text.copy(alpha = 0.7f),
+                    style = adaptiveTypography().labelSmall,
+                    fontWeight = FontWeight.ExtraLight,
+                    letterSpacing = 0.5.sp
                 )
             }
         }

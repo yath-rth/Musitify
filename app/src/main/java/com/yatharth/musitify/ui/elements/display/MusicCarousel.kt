@@ -1,9 +1,5 @@
 package com.yatharth.musitify.ui.elements.display
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,13 +29,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.google.common.math.Quantiles.scale
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.ui.elements.ShadowBox
+import com.yatharth.musitify.ui.theme.accentColor1
+import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
+import com.yatharth.musitify.ui.theme.cardBorder
+import com.yatharth.musitify.ui.theme.text
 import com.yatharth.musitify.util.Formatter
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import kotlinx.coroutines.launch
@@ -62,7 +63,7 @@ fun MusicCarousel(
     val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
     val coroutineScope = rememberCoroutineScope()
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val itemWidth = (size).dp
+    val itemWidth = size.dp
     val sidePadding = (screenWidth - itemWidth) / 2
 
     if (scroll) {
@@ -72,7 +73,6 @@ fun MusicCarousel(
         }
     }
 
-    // Track which item is centered, purely for visual state (e.g. "tap to play" affordance)
     val centeredIndex by remember {
         derivedStateOf { findCenterItemIndex(listState) ?: currentPlayingIndex }
     }
@@ -101,10 +101,12 @@ fun MusicCarousel(
             val alphaTarget = lerp(1f, 0.5f, abs(distanceFromCenter))
             val isNearCenter = abs(distanceFromCenter) < 0.15f
 
+            val isPlaying = index == currentPlayingIndex
+
             Box(
                 modifier = Modifier
                     .width(itemWidth)
-                    .height(itemWidth + 64.dp)
+                    .height(itemWidth + 80.dp)
                     .graphicsLayer {
                         scaleX = scaleTarget
                         scaleY = scaleTarget
@@ -127,7 +129,7 @@ fun MusicCarousel(
                         }
                     )
             ) {
-                AlbumArt(song, modifier = Modifier.fillMaxSize())
+                AlbumArt(song, modifier = Modifier.fillMaxSize(), isPlaying = isPlaying)
             }
         }
     }
@@ -149,8 +151,8 @@ fun findCenterItemIndex(listState: LazyListState): Int? {
 fun AlbumArt(
     song: Song,
     modifier: Modifier,
+    isPlaying: Boolean = false,
 ) {
-
     val artwork = remember(song.artPath) {
         File(song.artPath)
     }
@@ -160,14 +162,14 @@ fun AlbumArt(
         shadowOffsetX = 0.dp,
         shadowOffsetY = 0.dp,
         borderThickness = 6.dp,
-        rounding = 1
+        rounding = 5
     ) {
         Column(
-            modifier = Modifier.padding(14.dp)
+            modifier = Modifier.padding(12.dp)
         ) {
             AsyncImage(
                 model = artwork,
-                contentDescription = null,
+                contentDescription = song.name,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f),
@@ -180,14 +182,19 @@ fun AlbumArt(
                 text = song.name,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                style = adaptiveTypography().bodyMedium
+                style = adaptiveTypography().bodyMedium,
+                color = text,
+                fontWeight = FontWeight.Normal
             )
 
             Text(
-                text = Formatter.formatTime(song.length) + " • " + playCountOf(song) + " plays",
+                text = Formatter.formatTime(song.length) + " \u2022 " + playCountOf(song) + " plays",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = adaptiveTypography().bodySmall
+                style = adaptiveTypography().labelSmall,
+                color = text.copy(alpha = 0.6f),
+                fontWeight = FontWeight.ExtraLight,
+                letterSpacing = 0.5.sp
             )
         }
     }

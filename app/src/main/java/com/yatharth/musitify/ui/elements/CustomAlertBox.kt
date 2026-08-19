@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.yatharth.musitify.ui.theme.accentColor1
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.itemsBg
@@ -36,7 +38,11 @@ fun CustomAlertBox(
     AlertDialog(
         onDismissRequest = { showClearConfirm.value = false }, title = {
             Text(
-                text = title, style = adaptiveTypography().bodyLarge, color = text
+                text = title.uppercase(),
+                style = adaptiveTypography().labelLarge,
+                color = text,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 2.sp
             )
         }, text = {
             Column {
@@ -58,9 +64,10 @@ fun CustomAlertBox(
                         )
 
                         Text(
-                            text = "Don't show again",
+                            text = "DON'T SHOW AGAIN",
                             color = text,
-                            style = adaptiveTypography().labelSmall
+                            style = adaptiveTypography().labelSmall,
+                            letterSpacing = 1.sp
                         )
                     }
                 }
@@ -73,9 +80,11 @@ fun CustomAlertBox(
                 }, bgColor = accentColor1.copy(alpha = 0.2f)
             ) {
                 Text(
-                    text = yes,
-                    style = adaptiveTypography().bodyLarge,
+                    text = yes.uppercase(),
+                    style = adaptiveTypography().labelMedium,
                     color = accentColor1,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp,
                     modifier = Modifier
                         .background(
                             shape = RoundedCornerShape(10.dp), color = itemsBg.copy(alpha = 0.8f)
@@ -90,9 +99,11 @@ fun CustomAlertBox(
                     onDismiss()
                 }) {
                 Text(
-                    text = no,
-                    style = adaptiveTypography().bodyLarge,
+                    text = no.uppercase(),
+                    style = adaptiveTypography().labelMedium,
                     color = text,
+                    fontWeight = FontWeight.ExtraLight,
+                    letterSpacing = 1.2.sp,
                     modifier = Modifier
                         .background(
                             shape = RoundedCornerShape(10.dp), color = itemsBg.copy(alpha = 0.8f)

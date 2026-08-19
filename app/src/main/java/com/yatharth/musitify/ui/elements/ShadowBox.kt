@@ -20,8 +20,8 @@ import com.yatharth.musitify.ui.theme.text
 fun ShadowBox(
     modifier: Modifier = Modifier,
     bgColor: Color = itemsBg,
-    shadowOffsetX: Dp = 5.dp,
-    shadowOffsetY: Dp = 5.dp,
+    shadowOffsetX: Dp = 4.dp,
+    shadowOffsetY: Dp = 4.dp,
     borderThickness: Dp = 2.dp,
     rounding: Int = 5,
     offset: Dp = 0.dp,

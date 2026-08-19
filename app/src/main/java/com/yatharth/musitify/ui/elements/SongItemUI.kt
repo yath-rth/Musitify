@@ -1,8 +1,5 @@
 package com.yatharth.musitify.ui.elements
 
-import android.util.Log
-import android.util.Log.w
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -19,12 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.ui.theme.adaptiveTypography
-import com.yatharth.musitify.ui.theme.designSystemButton
-import com.yatharth.musitify.ui.theme.designSystemShadowBox
 import com.yatharth.musitify.ui.theme.text
 import java.io.File
 
@@ -34,8 +28,6 @@ fun SongItemUI(
     onPlay: () -> Unit,
     onLongPress: () -> Unit
 ) {
-    val TAG = "SongItemUI"
-
     val artwork = remember(song.artPath) {
         File(song.artPath)
     }
@@ -69,7 +61,7 @@ fun SongItemUI(
                 color = text,
                 text = song.name,
                 style = adaptiveTypography().bodyMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

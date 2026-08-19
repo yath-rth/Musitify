@@ -1,28 +1,55 @@
 package com.yatharth.musitify.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.CheckboxColors
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
 val DarkColorScheme = darkColorScheme(
-    primary = background,
-    secondary = secondaryBg,
-    background = background
+    primary = accentColor1,
+    onPrimary = itemsBg,
+    primaryContainer = accentColor1.copy(alpha = 0.2f),
+    onPrimaryContainer = text,
+    secondary = accentColor2,
+    onSecondary = itemsBg,
+    secondaryContainer = accentColor2.copy(alpha = 0.2f),
+    onSecondaryContainer = text,
+    tertiary = accentColor3,
+    onTertiary = text,
+    background = background,
+    onBackground = text,
+    surface = itemsBg,
+    onSurface = text,
+    surfaceVariant = secondaryBg,
+    onSurfaceVariant = text,
+    outline = cardBorder,
+    outlineVariant = dividerColor,
 )
 
 val LightColorScheme = lightColorScheme(
-    primary = background,
-    secondary = secondaryBg,
-    background = background
+    primary = accentColor1,
+    onPrimary = itemsBg,
+    primaryContainer = accentColor1.copy(alpha = 0.2f),
+    onPrimaryContainer = text,
+    secondary = accentColor2,
+    onSecondary = itemsBg,
+    secondaryContainer = accentColor2.copy(alpha = 0.2f),
+    onSecondaryContainer = text,
+    tertiary = accentColor3,
+    onTertiary = text,
+    background = background,
+    onBackground = text,
+    surface = itemsBg,
+    onSurface = text,
+    surfaceVariant = secondaryBg,
+    onSurfaceVariant = text,
+    outline = cardBorder,
+    outlineVariant = dividerColor,
 )
 
 @Composable
@@ -31,8 +58,11 @@ fun textFieldColors() = TextFieldDefaults.colors(
     unfocusedTextColor = text,
     focusedContainerColor = itemsBg,
     unfocusedContainerColor = itemsBg,
-    focusedIndicatorColor = text.copy(alpha = 0.2f),
-    unfocusedIndicatorColor = text.copy(alpha = 0.1f),
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent,
+    cursorColor = accentColor2,
+    focusedLeadingIconColor = accentColor2,
+    unfocusedLeadingIconColor = text.copy(alpha = 0.4f),
 )
 
 @Composable
@@ -45,19 +75,9 @@ fun checkBoxColors() = CheckboxDefaults.colors(
 @Composable
 fun MusitifyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> DarkColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

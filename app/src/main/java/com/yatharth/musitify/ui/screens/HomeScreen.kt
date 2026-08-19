@@ -1,8 +1,5 @@
 package com.yatharth.musitify.ui.screens
 
-import android.R.attr.fontWeight
-import android.R.attr.name
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
@@ -16,14 +13,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,11 +26,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key.Companion.I
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.common.collect.Multimaps.index
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.entity.Song
@@ -47,17 +38,15 @@ import com.yatharth.musitify.data.viewmodel.HomeScreenViewModel
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
 import com.yatharth.musitify.ui.elements.AddSongDialog
 import com.yatharth.musitify.ui.elements.CustomAlertBox
-import com.yatharth.musitify.ui.elements.CustomButton
 import com.yatharth.musitify.ui.elements.CustomCircularButton
-import com.yatharth.musitify.ui.elements.CustomSwitch
-import com.yatharth.musitify.ui.elements.display.MusicCarousel
 import com.yatharth.musitify.ui.elements.PlaybackControls
 import com.yatharth.musitify.ui.elements.PlaylistDialog
-import com.yatharth.musitify.ui.elements.SongItemUI
 import com.yatharth.musitify.ui.elements.SortIcon
+import com.yatharth.musitify.ui.elements.display.MusicCarousel
 import com.yatharth.musitify.ui.elements.display.PlaylistCarousel
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.background
+import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
 
 @Composable
@@ -135,7 +124,8 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Outlined.Sync,
                     contentDescription = "Sync your library",
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier.size(24.dp),
+                    tint = cardBorder
                 )
             }
         }
@@ -151,8 +141,9 @@ fun HomeScreen(
                 Text(
                     text = selectedPlaylist?.playlist?.name?.uppercase() ?: "PLAYLISTS",
                     color = text,
-                    style = adaptiveTypography().bodyLarge,
+                    style = adaptiveTypography().labelLarge,
                     fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -208,8 +199,9 @@ fun HomeScreen(
                         Text(
                             text = "ALL SONGS",
                             color = text,
-                            style = adaptiveTypography().bodyLarge,
+                            style = adaptiveTypography().labelLarge,
                             fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.sp,
                             modifier = Modifier
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         )
