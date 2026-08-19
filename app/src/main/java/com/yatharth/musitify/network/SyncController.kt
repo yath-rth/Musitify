@@ -5,7 +5,6 @@ import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SettingsRepository
 import com.yatharth.musitify.data.repository.SongRepository
 import com.yatharth.musitify.network.model.MPlaylist_Song
-import com.yatharth.musitify.network.model.MUser_Song
 import com.yatharth.musitify.network.model.NPlaylist
 import com.yatharth.musitify.network.model.NSong
 import com.yatharth.musitify.network.model.SyncLibraryPayload
@@ -48,7 +47,8 @@ class SyncController @Inject constructor(
                 id = it.uuid.toString(),
                 title = it.name,
                 artist = it.artist,
-                url = it.url
+                url = it.url,
+                downloaded_at = it.downloadedAt
             )
         }
 

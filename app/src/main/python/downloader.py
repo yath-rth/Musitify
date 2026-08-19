@@ -14,6 +14,8 @@ def downloadSong(url, output_path, retries=3, delay=3):
         "no_warnings": True,
     }
 
+    print("\n YT_DLP VERSION ID: " + str(yt_dlp.version) + "\n")
+
     last_error = None
 
     for attempt in range(retries):
@@ -71,7 +73,8 @@ def main():
 
 
 def test_download():
-    url = "https://youtu.be/polycpBREYA?si=3MFHgdibK3wcQHVq"  # Example video URL
+    # url = "https://youtu.be/polycpBREYA?si=3MFHgdibK3wcQHVq"  # Example video URL
+    url = "https://youtu.be/vNBNIce9XDM?si=ZiCf0Yc8OtkuggPL"
     output_dir = "./downloads"
     
     print(f"\nTesting downloadSong() with URL: {url}")

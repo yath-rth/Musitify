@@ -63,14 +63,16 @@ class IdManager @Inject constructor(
         }
     }
 
-    suspend fun generateDeviceId() {
-        val id = UUID.randomUUID()
+    suspend fun generateDeviceId(): String {
+        val id = UUID.randomUUID().toString()
         settingsDao.updateSetting(
             Settings(
                 name = "device_id",
-                value = id.toString(),
+                value = id,
                 updated_on = System.currentTimeMillis()
             )
         )
+
+        return id
     }
 }

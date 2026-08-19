@@ -34,4 +34,18 @@ class SettingsRepository @Inject constructor(
         return settingsDao.getSettingsById(id)
     }
 
+    suspend fun hasUserOpenedApp(): Boolean {
+        return settingsDao.getSettingByName("hasOpened")?.value.toBoolean()
+    }
+
+    suspend fun openedApp(){
+        settingsDao.updateSetting(
+            Settings(
+                name = "hasOpened",
+                value = "true",
+                updated_on = System.currentTimeMillis()
+            )
+        )
+    }
+
 }

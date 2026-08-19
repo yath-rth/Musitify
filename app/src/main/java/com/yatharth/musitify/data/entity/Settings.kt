@@ -8,7 +8,7 @@ import androidx.room.util.TableInfo
 
 @Entity(
     tableName = "Settings",
-    indices = [Index(value = ["name"])]
+    indices = [Index(value = ["name"], unique = true)]
 )
 data class Settings(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,

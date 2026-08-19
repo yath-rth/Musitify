@@ -20,7 +20,7 @@ import kotlin.jvm.java
 
 @Database(
     entities = [Song::class, Playlist::class, SongToPlaylist::class, Settings::class],
-    version = 5
+    version = 6
 )
 @TypeConverters(UUIDConverter::class)
 abstract class MusitifyDatabase : RoomDatabase() {
