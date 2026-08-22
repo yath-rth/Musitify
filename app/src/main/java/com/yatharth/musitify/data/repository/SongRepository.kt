@@ -2,6 +2,7 @@ package com.yatharth.musitify.data.repository
 
 import android.content.Context
 import android.util.Log
+import coil.util.CoilUtils.result
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.yatharth.musitify.data.dao.SongDao
@@ -26,6 +27,7 @@ import javax.inject.Singleton
 class SongRepository @Inject constructor(
     private val songDao: SongDao,
     private val convertSong: ConvertSong,
+    private val actionRepository: ActionRepository,
     @ApplicationContext private val context: Context
 ) {
     private val TAG = "SongRepository"
@@ -66,11 +68,14 @@ class SongRepository @Inject constructor(
                 uuid = UUID.randomUUID()
             )
             val insertedId = songDao.addSong(song)
-            if (insertedId != -1L) {
+            val insertedSong = if (insertedId != -1L) {
                 song.copy(id = insertedId.toInt())
             } else {
                 songDao.getSongByUrl(song.url) ?: song
             }
+
+            actionRepository.likedSong(insertedSong)
+            insertedSong
         } catch (e: Exception) {
             Log.e(TAG, e.message ?: "Error somewhere")
             null
@@ -93,18 +98,21 @@ class SongRepository @Inject constructor(
         val completedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val semaphore = Semaphore(maxConcurrent)
 
-        nSongs.map { nSong ->
+        val songMap = nSongs.map { nSong ->
             async(Dispatchers.IO) {
                 semaphore.withPermit {
                     try {
                         val downloadResult = module.callAttr("downloadSong", nSong.url, outputDir)
-                        val songName = convertSong.invoke(downloadResult)
+                        var songName = convertSong.invoke(downloadResult)
+                        val artist =
+                            downloadResult?.callAttr("get", "artist")?.toString() ?: "unknown"
                         val durationSeconds = downloadResult?.callAttr("get", "duration")?.toLong()
                         val durationMs = durationSeconds?.times(1000)
+                        songName = SongNormalizer.normalize(songName).normalizedTitle
 
                         val song = Song(
-                            name = nSong.title,
-                            artist = nSong.artist,
+                            name = songName,
+                            artist = artist,
                             length = durationMs ?: 0,
                             timeHeard = 0,
                             filePath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.mp3",
@@ -135,6 +143,9 @@ class SongRepository @Inject constructor(
         }.awaitAll()
             .filterNotNull()
             .toMap()
+
+        actionRepository.likedSongs(songMap.values.toList())
+        songMap
     }
 
     val allSongs = songDao.getAllSongs()
@@ -149,6 +160,7 @@ class SongRepository @Inject constructor(
         if (audioFile.exists()) audioFile.delete()
         if (artFile.exists()) artFile.delete()
 
+        actionRepository.unlikedSong(song.uuid.toString())
         songDao.deleteSong(id)
     }
 

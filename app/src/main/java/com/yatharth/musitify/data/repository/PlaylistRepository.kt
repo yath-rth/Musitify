@@ -10,6 +10,7 @@ import com.yatharth.musitify.data.dao.SongToPlaylistDao
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.entity.SongToPlaylist
+import com.yatharth.musitify.network.model.NSong
 import com.yatharth.musitify.util.ConvertSong
 import com.yatharth.musitify.util.SongMedia.cachePlaylistCover
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,7 +22,9 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.min
@@ -31,17 +34,16 @@ class PlaylistRepository @Inject constructor(
     private val songDao: SongDao,
     private val playlistDao: PlaylistDao,
     private val songToPlaylistDao: SongToPlaylistDao,
-    private val convertSong: ConvertSong,
+    private val songRepository: SongRepository,
+    private val actionRepository: ActionRepository,
     @ApplicationContext private val context: Context
 ) {
     private val TAG = "PlaylistRepository"
 
     suspend fun downloadPlaylist(
         playlistUrl: String,
-        outputDir: String? = context.getExternalFilesDir(null)?.absolutePath,
-        maxConcurrent: Int = 5,
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> }
-    ): Int = withContext(Dispatchers.IO) {
+    ) = withContext(Dispatchers.IO) {
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(context))
         }
@@ -53,61 +55,30 @@ class PlaylistRepository @Inject constructor(
         val playlistName = result?.callAttr("get", "name")?.toString() ?: "Unknown Playlist"
         val urlsObj = result?.callAttr("get", "urls")
         val urls: List<String> = urlsObj?.asList()?.map { it.toString() } ?: emptyList()
-        val total = urls.size
 
         Log.d(TAG, "Playlist: $playlistName, ${urls.size} tracks")
 
-        val completedCount = java.util.concurrent.atomic.AtomicInteger(0)
-        val semaphore = Semaphore(maxConcurrent)
+        val songs = songRepository.downloadSongsFromSync(
+            nSongs = urls.map {
+                NSong(
+                    id = UUID.randomUUID().toString(),
+                    url = it,
+                    title = "",
+                    artist = "",
+                    downloaded_at = System.currentTimeMillis()
+                )
+            },
+            onProgress = onProgress
+        ).map { item ->
+            Pair(item.value.id, item.value)
+        }.toMap()
 
-        val songs: Map<Int, Song?> = urls.map { url ->
-            async(Dispatchers.IO) {
-                semaphore.withPermit {
-                    try {
-                        val downloadResult = module.callAttr("downloadSong", url, outputDir)
-                        val songName = convertSong.invoke(downloadResult)
-                        val durationSeconds = downloadResult?.callAttr("get", "duration")?.toLong()
-                        val artist =
-                            downloadResult?.callAttr("get", "artist")?.toString() ?: "unknown"
-                        val durationMs = durationSeconds?.times(1000)
-
-                        val song = Song(
-                            name = songName,
-                            artist = artist,
-                            length = durationMs ?: 0,
-                            timeHeard = 0,
-                            filePath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.mp3",
-                            artPath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.webp",
-                            downloadedAt = System.currentTimeMillis(),
-                            url = url,
-                            uuid = UUID.randomUUID()
-                        )
-
-                        val insertedId = songDao.addSong(song)
-                        Pair(insertedId.toInt(), song)
-                    } catch (e: Exception) {
-                        Log.e(TAG, e.message ?: "Error somewhere")
-                        null
-                    } finally {
-                        val done = completedCount.incrementAndGet()
-                        onProgress(done, total)
-                    }
-                }
-            }
-        }.awaitAll()
-            .filterNotNull()
-            .toMap()
-
-        val validSongs = songs.filter { it.value != null }
-
-        if (validSongs.isNotEmpty()) {
-            createPlaylistAndAddSongs(playlistName, validSongs as Map<Int, Song>)
-            Log.d(TAG, "Created playlist '$playlistName' with ${validSongs.size} songs")
+        if (songs.isNotEmpty()) {
+            createPlaylistAndAddSongs(playlistName, songs)
+            Log.d(TAG, "Created playlist '$playlistName' with ${songs.size} songs")
         } else {
             Log.e(TAG, "No songs downloaded successfully, skipping playlist creation")
         }
-
-        completedCount.get()
     }
 
     suspend fun createPlaylist(
@@ -128,6 +99,11 @@ class PlaylistRepository @Inject constructor(
                 uuid = uuid ?: UUID.randomUUID()
             )
             val id = playlistDao.addPlaylist(playlist)
+            actionRepository.recordPlaylistCreated(
+                playlistUuid = playlist.uuid.toString(),
+                name = playlist.name,
+                createdAt = playlist.createdAt
+            )
             playlist.copy(id = id.toInt())
         }
     }
@@ -197,6 +173,12 @@ class PlaylistRepository @Inject constructor(
 
             songToPlaylistDao.addSongsToPlaylist(
                 validSongs.keys.mapIndexed { i, songId ->
+                    actionRepository.recordSongAddedToPlaylist(
+                        songUuid = songs[songId]?.uuid.toString(),
+                        playlistUuid = existingPlaylist.uuid.toString(),
+                        position = position + i
+                    )
+
                     SongToPlaylist(
                         songId = songId,
                         playListId = existingPlaylist.id,
@@ -213,6 +195,12 @@ class PlaylistRepository @Inject constructor(
 
             songToPlaylistDao.addSongsToPlaylist(
                 validSongs.keys.mapIndexed { i, songId ->
+                    actionRepository.recordSongAddedToPlaylist(
+                        songUuid = songs[songId]?.uuid.toString(),
+                        playlistUuid = playlist.uuid.toString(),
+                        position = position + i
+                    )
+
                     SongToPlaylist(
                         songId = songId,
                         playListId = playlist.id,
@@ -238,10 +226,20 @@ class PlaylistRepository @Inject constructor(
     }
 
     suspend fun deletePlaylist(id: Int) {
+        val playlist = playlistDao.getPlaylistById(id) ?: throw IOException("Invalid playlist id")
+        actionRepository.recordPlaylistDeleted(playlist.uuid.toString())
         playlistDao.delete(id)
     }
 
     suspend fun removeSong(songId: Int, playlistId: Int) {
+        val song = songDao.getSongById(songId) ?: throw IOException("Invalid song id")
+        val playlist =
+            playlistDao.getPlaylistById(playlistId) ?: throw IOException("Invalid playlist id")
+
+        actionRepository.recordSongRemovedFromPlaylist(
+            song.uuid.toString(),
+            playlist.uuid.toString()
+        )
         songToPlaylistDao.remove(songId, playlistId)
         Log.d("Temp", "Removed song $songId from $playlistId")
     }

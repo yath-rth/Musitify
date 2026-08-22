@@ -73,8 +73,11 @@ interface PlaylistDao {
     @Query("UPDATE Playlist SET timeHeard = timeHeard + :ms WHERE id = :id")
     suspend fun addListenTime(id: Int, ms: Long)
 
-    @Query("SELECT * FROM Playlist WHERE name = :name LIMIT 1")
+    @Query("SELECT * FROM Playlist WHERE name = :name")
     suspend fun getPlaylistByName(name: String): Playlist?
+
+    @Query("SELECT * FROM Playlist WHERE id = :id")
+    suspend fun getPlaylistById(id: Int): Playlist?
 
     @Query("UPDATE Playlist SET artPath = :artPath where id = :id" )
     suspend fun updateArt(id: Int, artPath: String)
