@@ -47,10 +47,10 @@ android {
 
 chaquopy {
     defaultConfig{
-        buildPython("C:/Users/thecr/AppData/Local/Python/pythoncore-3.11-64/python.exe")
-        version = "3.11"
-        pip{
-            install("yt-dlp")
+        buildPython("C:/Python314/python.exe")
+        version = "3.14"
+        pip {
+            install("yt-dlp==2026.8.18.122307.dev0")
         }
     }
 }

@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -159,10 +160,12 @@ fun CustomCircularButton(
             Box(
                 modifier = Modifier
                     .wrapContentSize()
-                    .background(color = bgColor)
+                    .background(color = bgColor),
+                contentAlignment = Alignment.Center
             ) {
                 Box(
-                    modifier.padding(4.dp)
+                    modifier.padding(4.dp),
+                    contentAlignment = Alignment.Center
                 ) { content() }
             }
         }

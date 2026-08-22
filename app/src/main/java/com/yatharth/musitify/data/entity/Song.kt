@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 import java.util.UUID
 
 @Entity(
-    indices = [Index(value = ["url"], unique = true)]
+    indices = [Index(value = ["url"], unique = true), Index(value = ["uuid"], unique = true)]
 )
 data class Song(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,

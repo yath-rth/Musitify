@@ -17,7 +17,7 @@ interface SongToPlaylistDao {
     @Insert(onConflict = IGNORE)
     suspend fun addSongToPlaylist(songToPlaylist: SongToPlaylist)
 
-    @Insert(onConflict = REPLACE)
+    @Insert(onConflict = IGNORE)
     suspend fun addSongsToPlaylist(songToPlaylist: List<SongToPlaylist>)
 
     @Query(

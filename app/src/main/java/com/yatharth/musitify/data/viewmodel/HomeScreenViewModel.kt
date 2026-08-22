@@ -78,7 +78,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = PlaylistDialogUiState.Loading
             try {
-                playlistRepository.createPlaylist(name, songs.associateBy { it.id })
+                playlistRepository.createPlaylistAndAddSongs(name, songs.associateBy { it.id })
                 _state.value = PlaylistDialogUiState.Success
             } catch (e: Exception) {
                 _state.value = PlaylistDialogUiState.Error(e.message ?: "Unknown error")
@@ -161,7 +161,13 @@ class HomeScreenViewModel @Inject constructor(
 
     fun syncLibrary() {
         viewModelScope.launch {
-            syncController.syncData()
+            syncController.sendData()
+        }
+    }
+
+    fun fetchLibrary() {
+        viewModelScope.launch {
+            syncController.receiveData()
         }
     }
 }

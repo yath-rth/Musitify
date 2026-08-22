@@ -14,7 +14,7 @@ interface SongDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addSong(song: Song): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addSongs(song: List<Song>)
 
     @Query("SELECT * FROM Song ORDER BY downloadedAt")
@@ -44,6 +44,16 @@ interface SongDao {
     """
     )
     suspend fun getSongsByIds(ids: List<Int>): List<Song>
+
+    @Query(
+        """
+        SELECT *
+        FROM Song
+        WHERE url in (:urls)
+        ORDER BY downloadedAt
+    """
+    )
+    suspend fun getSongsByUrls(urls: List<String>): List<Song>
 
     @Query("SELECT * FROM Song WHERE name LIKE '%' || :query || '%' ORDER BY name")
     fun searchSongs(query: String): Flow<List<Song>>

@@ -17,7 +17,7 @@ interface PlaylistDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addPlaylist(playlist: Playlist): Long
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addPlaylists(playlist: List<Playlist>)
 
     @Query(
@@ -32,6 +32,9 @@ interface PlaylistDao {
     )
     fun getAllPlaylists(): Flow<List<PlaylistInfo>>
 
+    @Query("SELECT * FROM PLAYLIST where name in (:names)")
+    suspend fun getAllPlaylistsFrom(names: List<String>): List<Playlist>
+
     @Query(
         """
     SELECT p.*
@@ -39,9 +42,6 @@ interface PlaylistDao {
     """
     )
     suspend fun getAllPlaylistsSuspend(): List<Playlist>
-
-    @Update
-    suspend fun updatePlaylist(playlist: Playlist)
 
     @Query(
         """
@@ -55,6 +55,18 @@ interface PlaylistDao {
     )
     fun getSongsForPlaylist(playlistId: Int): Flow<List<Song>>
 
+    @Query(
+        """
+        SELECT s.*
+        FROM Song s
+        INNER JOIN SongToPlaylist sp
+            ON sp.playListId = :playlistId
+        WHERE s.id = sp.songId
+        ORDER BY sp.position
+    """
+    )
+    suspend fun getSongsForPlaylistSuspend(playlistId: Int): List<Song>
+
     @Query("DELETE FROM Playlist WHERE id = :id")
     suspend fun delete(id: Int)
 
@@ -63,5 +75,8 @@ interface PlaylistDao {
 
     @Query("SELECT * FROM Playlist WHERE name = :name LIMIT 1")
     suspend fun getPlaylistByName(name: String): Playlist?
+
+    @Query("UPDATE Playlist SET artPath = :artPath where id = :id" )
+    suspend fun updateArt(id: Int, artPath: String)
 
 }

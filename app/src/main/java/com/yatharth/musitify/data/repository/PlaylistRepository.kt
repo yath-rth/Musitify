@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
-import com.google.common.io.Files.map
 import com.yatharth.musitify.data.dao.PlaylistDao
 import com.yatharth.musitify.data.dao.SongDao
 import com.yatharth.musitify.data.dao.SongToPlaylistDao
@@ -102,7 +101,7 @@ class PlaylistRepository @Inject constructor(
         val validSongs = songs.filter { it.value != null }
 
         if (validSongs.isNotEmpty()) {
-            createPlaylist(playlistName, validSongs as Map<Int, Song>)
+            createPlaylistAndAddSongs(playlistName, validSongs as Map<Int, Song>)
             Log.d(TAG, "Created playlist '$playlistName' with ${validSongs.size} songs")
         } else {
             Log.e(TAG, "No songs downloaded successfully, skipping playlist creation")
@@ -111,41 +110,61 @@ class PlaylistRepository @Inject constructor(
         completedCount.get()
     }
 
-    suspend fun createPlaylist(name: String, songs: Map<Int, Song>) = withContext(Dispatchers.IO) {
+    suspend fun createPlaylist(
+        name: String,
+        uuid: UUID? = null
+    ): Playlist = withContext(Dispatchers.IO) {
         val existing = playlistDao.getPlaylistByName(name)
 
         val playlistId: Int
         if (existing != null) {
             Log.d(TAG, "Playlist '$name' already exists, adding songs to it")
-            playlistId = existing.id
-            addSongsToPlaylist(existing, songs)
+            existing
         } else {
             val playlist = Playlist(
                 name = name,
                 timeHeard = 0,
                 createdAt = System.currentTimeMillis(),
-                uuid = UUID.randomUUID()
+                uuid = uuid ?: UUID.randomUUID()
             )
             val id = playlistDao.addPlaylist(playlist)
-            playlistId = id.toInt()
-            addSongsToPlaylist(playlist, songs)
+            playlist.copy(id = id.toInt())
         }
-
-        val songs = songDao.getSongsByIds(songs.keys.toList())
-        val art = getOrCreatePlaylistCover(playlistId, songs)
-        playlistDao.updatePlaylist(
-            (
-                    existing ?: Playlist(
-                        id = playlistId,
-                        name = name,
-                        timeHeard = 0,
-                        createdAt = System.currentTimeMillis(),
-                        uuid = UUID.randomUUID()
-                    )
-                    )
-                .copy(id = playlistId, artPath = art.path)
-        )
     }
+
+    suspend fun getAllPlaylistsFrom(names: List<String>): List<Playlist> {
+        return playlistDao.getAllPlaylistsFrom(names)
+    }
+
+    suspend fun generatePlaylistArt(playlistId: Int) = withContext(Dispatchers.IO) {
+        val songRelations = playlistDao.getSongsForPlaylistSuspend(playlistId)
+        val songs = songDao.getSongsByIds(songRelations.map { it.id })
+        val art = getOrCreatePlaylistCover(playlistId, songs)
+        playlistDao.updateArt(playlistId, art.path)
+    }
+
+    suspend fun createPlaylistAndAddSongs(name: String, songs: Map<Int, Song>) =
+        withContext(Dispatchers.IO) {
+            val existing = playlistDao.getPlaylistByName(name)
+
+            val playlist: Playlist
+            if (existing != null) {
+                Log.d(TAG, "Playlist '$name' already exists, adding songs to it")
+                playlist = existing
+            } else {
+                val _playlist = Playlist(
+                    name = name,
+                    timeHeard = 0,
+                    createdAt = System.currentTimeMillis(),
+                    uuid = UUID.randomUUID()
+                )
+                val id = playlistDao.addPlaylist(_playlist)
+                playlist = _playlist.copy(id = id.toInt())
+            }
+
+            addSongsToPlaylist(playlist, songs)
+            generatePlaylistArt(playlist.id)
+        }
 
     fun getOrCreatePlaylistCover(playlistId: Int, songs: List<Song>): File {
         val coversDir = File(context.filesDir, "playlist_covers").apply { mkdirs() }
@@ -156,17 +175,8 @@ class PlaylistRepository @Inject constructor(
         return cachePlaylistCover(context, playlistId, artPaths)
     }
 
-    suspend fun addSongToPlaylist(songId: Int, playlistId: Int) {
-        val startPosition = songToPlaylistDao.getLastPosition(playlistId) + 1
-
-        songToPlaylistDao.addSongToPlaylist(
-            SongToPlaylist(
-                songId = songId,
-                playListId = playlistId,
-                position = startPosition,
-                addedOn = System.currentTimeMillis()
-            )
-        )
+    suspend fun addSongPlaylistRelations(relations: List<SongToPlaylist>) {
+        songToPlaylistDao.addSongsToPlaylist(relations)
     }
 
     suspend fun addSongsToPlaylist(playlist: Playlist, songs: Map<Int, Song>) {
@@ -175,7 +185,6 @@ class PlaylistRepository @Inject constructor(
             throw IllegalStateException("Playlist with name '$playlist.name' not found in database")
         }
 
-        Log.d("Test", songs.toString())
         val validSongs = songs.filter { song ->
             songDao.getSongById(song.key) != null
         }.ifEmpty {
@@ -194,7 +203,7 @@ class PlaylistRepository @Inject constructor(
                         position = position + i,
                         addedOn = System.currentTimeMillis(),
                         song_uuid = songs[songId]?.uuid,
-                        playlist_uuid = playlist.uuid ?: existingPlaylist.uuid
+                        playlist_uuid = existingPlaylist.uuid
                     )
                 }
             )

@@ -6,5 +6,6 @@ import kotlinx.serialization.Serializable
 data class MPlaylist_Song(
     val song_id: String,
     val playlist_id: String,
+    val position: Int,
     val added_on: Long
 )

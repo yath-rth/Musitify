@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -117,16 +119,32 @@ fun HomeScreen(
             }
         },
         floatingActionButton = {
-            CustomCircularButton(
-                modifier = Modifier.size(56.dp),
-                onClick = { homeScreenViewModel.syncLibrary() },
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Sync,
-                    contentDescription = "Sync your library",
-                    modifier = Modifier.size(24.dp),
-                    tint = cardBorder
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                CustomCircularButton(
+                    modifier = Modifier.size(56.dp),
+                    onClick = { homeScreenViewModel.syncLibrary() },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowUpward,
+                        contentDescription = "Sync your library",
+                        modifier = Modifier.size(24.dp),
+                        tint = cardBorder
+                    )
+                }
+
+                CustomCircularButton(
+                    modifier = Modifier.size(56.dp),
+                    onClick = { homeScreenViewModel.fetchLibrary() },
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowDownward,
+                        contentDescription = "Fetch library",
+                        modifier = Modifier.size(24.dp),
+                        tint = cardBorder
+                    )
+                }
             }
         }
     ) { innerPadding ->

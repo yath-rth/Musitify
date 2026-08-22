@@ -6,11 +6,14 @@ import com.yatharth.musitify.data.dao.PlaylistDao
 import com.yatharth.musitify.data.dao.SettingsDao
 import com.yatharth.musitify.data.dao.SongDao
 import com.yatharth.musitify.data.dao.SongToPlaylistDao
+import com.yatharth.musitify.data.dao.SyncActionDao
 import com.yatharth.musitify.data.migrations.MIGRATION_1_2
 import com.yatharth.musitify.data.migrations.MIGRATION_2_3
 import com.yatharth.musitify.data.migrations.MIGRATION_3_4
 import com.yatharth.musitify.data.migrations.MIGRATION_4_5
 import com.yatharth.musitify.data.migrations.MIGRATION_5_6
+import com.yatharth.musitify.data.migrations.MIGRATION_6_7
+import com.yatharth.musitify.data.migrations.MIGRATION_7_8
 import com.yatharth.musitify.util.UUIDConverter
 import dagger.Module
 import dagger.Provides
@@ -36,7 +39,7 @@ object DatabaseModule {
         )
             .addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                MIGRATION_5_6
+                MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
             )
             .build()
     }
@@ -60,4 +63,9 @@ object DatabaseModule {
     fun provideSettingsDao(
         db: MusitifyDatabase
     ): SettingsDao = db.settingsDao()
+
+    @Provides
+    fun provideSyncActionDao(
+        db: MusitifyDatabase
+    ): SyncActionDao = db.syncActionDao()
 }
