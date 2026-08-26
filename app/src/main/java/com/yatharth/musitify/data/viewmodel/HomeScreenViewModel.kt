@@ -6,6 +6,7 @@ import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SongRepository
+import com.yatharth.musitify.network.ActionController
 import com.yatharth.musitify.network.SyncController
 import com.yatharth.musitify.ui.elements.SortMode
 import com.yatharth.musitify.util.SongMedia.playCountOf
@@ -27,7 +28,8 @@ import kotlin.time.Duration.Companion.milliseconds
 class HomeScreenViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val playlistRepository: PlaylistRepository,
-    private val syncController: SyncController
+    private val syncController: SyncController,
+    private val actionController: ActionController
 ) : ViewModel() {
 
     val allSongs = songRepository.allSongs.stateIn(
@@ -161,13 +163,15 @@ class HomeScreenViewModel @Inject constructor(
 
     fun syncLibrary() {
         viewModelScope.launch {
-            syncController.sendData()
+//            syncController.sendData()
+            actionController.pushActions()
         }
     }
 
     fun fetchLibrary() {
         viewModelScope.launch {
-            syncController.receiveData()
+//            syncController.receiveData()
+            actionController.pullActions()
         }
     }
 }

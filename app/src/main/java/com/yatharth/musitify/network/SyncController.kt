@@ -1,8 +1,6 @@
 package com.yatharth.musitify.network
 
 import android.util.Log
-import com.google.common.io.Files.map
-import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.SongToPlaylist
 import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SettingsRepository
@@ -11,7 +9,7 @@ import com.yatharth.musitify.network.model.FetchLibraryPayload
 import com.yatharth.musitify.network.model.MPlaylist_Song
 import com.yatharth.musitify.network.model.NPlaylist
 import com.yatharth.musitify.network.model.NSong
-import com.yatharth.musitify.network.model.SyncLibraryPayload
+import com.yatharth.musitify.network.model.PushLibraryPayload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -34,7 +32,7 @@ class SyncController @Inject constructor(
 ) {
     private val TAG = "SyncController"
     private val client = OkHttpClient()
-    private val URL = "http://10.133.82.9:8080/sync"
+    private val URL = "http://10.122.46.9:8080/sync"
     val JSON: MediaType? = "application/json; charset=utf-8".toMediaTypeOrNull()
 
     suspend fun sendData() {
@@ -73,7 +71,7 @@ class SyncController @Inject constructor(
             )
         }
 
-        val syncPayload = SyncLibraryPayload(
+        val syncPayload = PushLibraryPayload(
             device_id = device_id,
             songs = songList,
             playlists = playlists,

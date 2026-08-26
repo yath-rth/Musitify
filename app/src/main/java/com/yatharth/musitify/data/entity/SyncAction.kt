@@ -3,6 +3,7 @@ package com.yatharth.musitify.data.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 import java.util.UUID
 
 enum class ActionType {
@@ -21,6 +22,7 @@ enum class ActionType {
         Index(value = ["isSynced"])
     ]
 )
+@Serializable
 data class SyncAction(
     @PrimaryKey(autoGenerate = true) val localId: Int = 0,
     val actionUuid: String = UUID.randomUUID().toString(),

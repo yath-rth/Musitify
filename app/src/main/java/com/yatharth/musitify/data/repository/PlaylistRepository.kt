@@ -121,23 +121,7 @@ class PlaylistRepository @Inject constructor(
 
     suspend fun createPlaylistAndAddSongs(name: String, songs: Map<Int, Song>) =
         withContext(Dispatchers.IO) {
-            val existing = playlistDao.getPlaylistByName(name)
-
-            val playlist: Playlist
-            if (existing != null) {
-                Log.d(TAG, "Playlist '$name' already exists, adding songs to it")
-                playlist = existing
-            } else {
-                val _playlist = Playlist(
-                    name = name,
-                    timeHeard = 0,
-                    createdAt = System.currentTimeMillis(),
-                    uuid = UUID.randomUUID()
-                )
-                val id = playlistDao.addPlaylist(_playlist)
-                playlist = _playlist.copy(id = id.toInt())
-            }
-
+            val playlist = createPlaylist(name)
             addSongsToPlaylist(playlist, songs)
             generatePlaylistArt(playlist.id)
         }
@@ -213,7 +197,6 @@ class PlaylistRepository @Inject constructor(
             )
         }
     }
-
 
     suspend fun getAllSongRelations(): List<SongToPlaylist> {
         return songToPlaylistDao.getAll()

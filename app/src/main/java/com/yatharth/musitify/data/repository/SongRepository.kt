@@ -2,7 +2,6 @@ package com.yatharth.musitify.data.repository
 
 import android.content.Context
 import android.util.Log
-import coil.util.CoilUtils.result
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import com.yatharth.musitify.data.dao.SongDao
@@ -18,6 +17,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
@@ -49,15 +50,14 @@ class SongRepository @Inject constructor(
                 context.getExternalFilesDir(null)?.absolutePath
             )
             val songPath = convertSong.invoke(result)
-            var songName = result?.callAttr("get", "title")?.toString() ?: "unknown"
+            val songName = result?.callAttr("get", "title")?.toString() ?: "unknown"
             val durationSeconds = result?.callAttr("get", "duration")?.toLong()
             val artist = result?.callAttr("get", "artist")?.toString() ?: "unknown"
             val durationMs = durationSeconds?.times(1000)
-
-            songName = SongNormalizer.normalize(songName).normalizedTitle
+            val normalizedSongName = SongNormalizer.normalize(songName).normalizedTitle
 
             val song = Song(
-                name = songName,
+                name = normalizedSongName,
                 artist = artist,
                 length = durationMs ?: 0,
                 timeHeard = 0,
@@ -103,20 +103,22 @@ class SongRepository @Inject constructor(
                 semaphore.withPermit {
                     try {
                         val downloadResult = module.callAttr("downloadSong", nSong.url, outputDir)
-                        var songName = convertSong.invoke(downloadResult)
+                        val songPath = convertSong.invoke(downloadResult)
+                        val songName =
+                            downloadResult?.callAttr("get", "title")?.toString() ?: "unknown"
                         val artist =
                             downloadResult?.callAttr("get", "artist")?.toString() ?: "unknown"
                         val durationSeconds = downloadResult?.callAttr("get", "duration")?.toLong()
                         val durationMs = durationSeconds?.times(1000)
-                        songName = SongNormalizer.normalize(songName).normalizedTitle
+                        val normalizedSongName = SongNormalizer.normalize(songName).normalizedTitle
 
                         val song = Song(
-                            name = songName,
+                            name = normalizedSongName,
                             artist = artist,
                             length = durationMs ?: 0,
                             timeHeard = 0,
-                            filePath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.mp3",
-                            artPath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songName.webp",
+                            filePath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songPath.mp3",
+                            artPath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songPath.webp",
                             downloadedAt = nSong.downloaded_at,
                             url = nSong.url,
                             uuid = UUID.fromString(nSong.id)
@@ -126,8 +128,6 @@ class SongRepository @Inject constructor(
                         val storedSong = if (insertedId != -1L) {
                             song.copy(id = insertedId.toInt())
                         } else {
-                            // Insert was ignored due to a unique-constraint conflict
-                            // (url/uuid already present) -> fetch the existing row
                             songDao.getSongByUrl(song.url) ?: song
                         }
                         Pair(nSong.id, storedSong)
@@ -175,5 +175,11 @@ class SongRepository @Inject constructor(
             songDao.updateLength(song.id, length)
         }
         Log.d("Temp", "Completed migration like behaviour")
+    }
+
+    suspend fun addSongFromSync(songUuid: String?, payload: String?){
+        if(songUuid == null || payload == null) return
+        val jsonObject = Json.parseToJsonElement(payload).jsonObject
+        
     }
 }

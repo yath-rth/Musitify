@@ -144,6 +144,10 @@ class ActionRepository @Inject constructor(
      * Returns only the actions that were actually new.
      */
     suspend fun insertRemoteActions(actions: List<SyncAction>): List<SyncAction> {
-        return actions.filter { !hasAction(it.actionUuid) }
+        val newActions = actions.filter { !hasAction(it.actionUuid) }
+        if (newActions.isNotEmpty()) {
+            syncActionDao.insertAll(newActions)
+        }
+        return newActions
     }
 }

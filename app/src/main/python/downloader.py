@@ -1,20 +1,19 @@
 import yt_dlp
 import time
 
+import json
 import os
 import time
 import yt_dlp
 
 def downloadSong(url, output_path, retries=3, delay=3):
     ydl_opts = {
-        "outtmpl": f"{output_path}/%(title)s-%(artist)s-%(release_date)s.%(ext)s",
+        "outtmpl": f"{output_path}/%(title)s-%(uploader)s-%(release_date)s.%(ext)s",
         "format": "bestaudio/best",
         "writethumbnail": True,
         # "quiet": True,
         "no_warnings": True,
     }
-
-    print("\n YT_DLP VERSION ID: " + str(yt_dlp.version) + "\n")
 
     last_error = None
 
@@ -24,8 +23,6 @@ def downloadSong(url, output_path, retries=3, delay=3):
                 info = ydl.extract_info(url, download=True)
                 audio_path = ydl.prepare_filename(info)
                 base = os.path.splitext(audio_path)[0]
-
-                print(f"Information extracted from the video: {list(info.keys())}\n--------------\n")
                 
                 thumbnail_path = None
                 for ext in (".webp", ".jpg", ".png"):
@@ -33,11 +30,11 @@ def downloadSong(url, output_path, retries=3, delay=3):
                     if os.path.exists(path):
                         thumbnail_path = path
                         break
-
+                
                 artist = (
                         info.get("artist")
                         or str(info.get("artists"))
-                        or info.get("channel")
+                        or info.get("uploader")
                         or "Unknown Artist"
                 )
 
@@ -73,8 +70,7 @@ def main():
 
 
 def test_download():
-    # url = "https://youtu.be/polycpBREYA?si=3MFHgdibK3wcQHVq"  # Example video URL
-    url = "https://youtu.be/vNBNIce9XDM?si=ZiCf0Yc8OtkuggPL"
+    url = "https://youtu.be/NxgyfY70-xQ"
     output_dir = "./downloads"
     
     print(f"\nTesting downloadSong() with URL: {url}")
