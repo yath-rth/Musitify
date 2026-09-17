@@ -49,7 +49,7 @@ class PlaylistRepository @Inject constructor(
 
         val result = module.callAttr("get_playlist_urls", playlistUrl)
 
-        val playlistName = result?.callAttr("get", "name")?.toString() ?: "Unknown Playlist"
+        val playlistName = result?.callAttr("get", "name")?.toString()?.trim() ?: "Unknown Playlist"
         val urlsObj = result?.callAttr("get", "urls")
         val urls: List<String> = urlsObj?.asList()?.map { it.toString() } ?: emptyList()
 

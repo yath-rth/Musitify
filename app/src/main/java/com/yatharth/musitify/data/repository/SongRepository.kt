@@ -22,6 +22,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.IOException
+import java.util.Collections.addAll
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -166,7 +167,11 @@ class SongRepository @Inject constructor(
             .toMap()
 
         actionRepository.likedSongs(songMap.values.toList())
-        songMap + existingSongs.associateBy { it.uuid.toString() }
+
+        val lookup = songMap + existingSongs.associateBy { it.uuid.toString() }
+        return@withContext nSongs.mapNotNull { nSong ->
+            lookup[nSong.id]?.let { nSong.id to it }
+        }.toMap()
     }
 
     val allSongs = songDao.getAllSongs()

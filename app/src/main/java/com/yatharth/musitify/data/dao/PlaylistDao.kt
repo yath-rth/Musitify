@@ -85,5 +85,4 @@ interface PlaylistDao {
 
     @Query("UPDATE Playlist SET artPath = :artPath where id = :id" )
     suspend fun updateArt(id: Int, artPath: String)
-
 }

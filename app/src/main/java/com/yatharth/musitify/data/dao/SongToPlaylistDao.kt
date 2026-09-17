@@ -14,10 +14,10 @@ interface SongToPlaylistDao {
     @Query("SELECT * FROM SongToPlaylist")
     suspend fun getAll(): List<SongToPlaylist>
 
-    @Insert(onConflict = IGNORE)
+    @Insert(onConflict = REPLACE)
     suspend fun addSongToPlaylist(songToPlaylist: SongToPlaylist)
 
-    @Insert(onConflict = IGNORE)
+    @Insert(onConflict = REPLACE)
     suspend fun addSongsToPlaylist(songToPlaylist: List<SongToPlaylist>)
 
     @Query(
