@@ -132,12 +132,7 @@ fun HomeScreen(
                         modifier = Modifier.size(24.dp),
                         tint = cardBorder
                     )
-                }
 
-                CustomCircularButton(
-                    modifier = Modifier.size(56.dp),
-                    onClick = { homeScreenViewModel.fetchLibrary() },
-                ) {
                     Icon(
                         imageVector = Icons.Outlined.ArrowDownward,
                         contentDescription = "Fetch library",
@@ -145,6 +140,18 @@ fun HomeScreen(
                         tint = cardBorder
                     )
                 }
+
+//                CustomCircularButton(
+//                    modifier = Modifier.size(56.dp),
+//                    onClick = { homeScreenViewModel.fetchLibrary() },
+//                ) {
+//                    Icon(
+//                        imageVector = Icons.Outlined.ArrowDownward,
+//                        contentDescription = "Fetch library",
+//                        modifier = Modifier.size(24.dp),
+//                        tint = cardBorder
+//                    )
+//                }
             }
         }
     ) { innerPadding ->

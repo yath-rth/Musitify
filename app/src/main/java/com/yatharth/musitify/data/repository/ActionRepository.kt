@@ -9,6 +9,7 @@ import com.yatharth.musitify.data.entity.ActionType
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.entity.SongToPlaylist
 import com.yatharth.musitify.data.entity.SyncAction
+import kotlinx.serialization.json.put
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -53,14 +54,13 @@ class ActionRepository @Inject constructor(
         record(
             type = ActionType.SONG_LIKED,
             songUuid = song.uuid?.toString(),
-            payloadJson = json.encodeToString(
+            payloadJson =
                 buildJsonObject {
                     put("url", song.url)
                     put("title", song.name)
                     put("artist", song.artist)
                     put("downloaded_at", song.downloadedAt)
                 }.toString()
-            )
         )
     }
 
@@ -69,15 +69,15 @@ class ActionRepository @Inject constructor(
             SyncAction(
                 type = ActionType.SONG_LIKED,
                 songUuid = song.uuid?.toString(),
-                payload = json.encodeToString(
+                payload =
                     buildJsonObject {
                         put("url", song.url)
                         put("title", song.name)
                         put("artist", song.artist)
                         put("downloaded_at", song.downloadedAt)
                     }.toString()
-                )
             )
+
         }
         syncActionDao.insertAll(actions)
     }
@@ -91,28 +91,41 @@ class ActionRepository @Inject constructor(
         record(
             type = ActionType.PLAYLIST_CREATED,
             playlistUuid = playlistUuid,
-            payloadJson = json.encodeToString(
+            payloadJson =
                 buildJsonObject {
                     put("name", name)
                     put("created_at", createdAt)
                 }.toString()
-            )
         )
+
     }
 
     suspend fun recordPlaylistDeleted(playlistUuid: String) {
         record(type = ActionType.PLAYLIST_DELETED, playlistUuid = playlistUuid)
     }
 
-    suspend fun recordSongAddedToPlaylist(songUuid: String, playlistUuid: String, position: Int) {
+    suspend fun recordSongAddedToPlaylist(
+        song: Song?,
+        playlistUuid: String,
+        position: Int,
+        added_on: Long
+    ) {
+        if(song == null) return
         record(
             type = ActionType.SONG_ADDED_TO_PLAYLIST,
-            songUuid = songUuid,
+            songUuid = song.uuid.toString(),
             playlistUuid = playlistUuid,
-            payloadJson = json.encodeToString(
-                buildJsonObject { put("position", position) }
-            )
+            payloadJson =
+                buildJsonObject {
+                    put("url", song.url)
+                    put("title", song.name)
+                    put("artist", song.artist)
+                    put("downloaded_at", song.downloadedAt)
+                    put("position", position)
+                    put("added_on", added_on)
+                }.toString()
         )
+
     }
 
     suspend fun recordSongRemovedFromPlaylist(songUuid: String, playlistUuid: String) {
@@ -128,7 +141,8 @@ class ActionRepository @Inject constructor(
     suspend fun getUnsyncedActions(): List<SyncAction> = syncActionDao.getUnsynced()
 
     suspend fun markSynced(actionUuids: List<String>) {
-        if (actionUuids.isNotEmpty()) syncActionDao.markSynced(actionUuids)
+        //IMPORTANT: Unmark when pushing or creating a prod version
+//        if (actionUuids.isNotEmpty()) syncActionDao.markSynced(actionUuids)
     }
 
     suspend fun pruneSynced() = syncActionDao.pruneSynced()
@@ -144,7 +158,9 @@ class ActionRepository @Inject constructor(
      * Returns only the actions that were actually new.
      */
     suspend fun insertRemoteActions(actions: List<SyncAction>): List<SyncAction> {
-        val newActions = actions.filter { !hasAction(it.actionUuid) }
+        val existingActions = syncActionDao.getByActionUuids(actions.map { it.actionUuid })
+            .mapNotNull { it?.actionUuid }
+        val newActions = actions.filter { !existingActions.contains(it.actionUuid) }
         if (newActions.isNotEmpty()) {
             syncActionDao.insertAll(newActions)
         }

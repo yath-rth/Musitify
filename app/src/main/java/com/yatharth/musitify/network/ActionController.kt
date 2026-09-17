@@ -28,7 +28,7 @@ class ActionController @Inject constructor(
 ) {
     private val TAG = "ActionController"
     private val client = OkHttpClient()
-    private val URL = "http://10.122.46.9:8080/actions"
+    private val URL = "http://localhost:8080/actions"
     val JSON: MediaType? = "application/json; charset=utf-8".toMediaTypeOrNull()
 
     suspend fun pushActions() {
@@ -91,15 +91,16 @@ class ActionController @Inject constructor(
 
                     val nActions = payload.actions
                     val syncActions = nActions.map { it.toSyncAction() }
-                    val newActions = actionRepository.insertRemoteActions(syncActions)
+//                    val newActions = actionRepository.insertRemoteActions(syncActions)
+//                    Log.d(TAG, newActions.toString())
 
-                    if (newActions.isNotEmpty()) {
-                        remoteChangesManager.apply(newActions)
+                    if (syncActions.isNotEmpty()) {
+                        remoteChangesManager.apply(syncActions)
                     }
 
                     val maxId = nActions.maxOfOrNull { it.localId }
                     if (maxId != null) {
-                        actionRepository.setCursor(maxId.toLong())
+//                        actionRepository.setCursor(maxId.toLong())
                     }
                 }
             }

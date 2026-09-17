@@ -1,7 +1,6 @@
 package com.yatharth.musitify.data.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -28,6 +27,9 @@ interface SongDao {
 
     @Query("SELECT * FROM Song WHERE id = :id")
     suspend fun getSongById(id: Int): Song?
+
+    @Query("SELECT * FROM Song WHERE uuid = :id")
+    suspend fun getSongByUuid(id: String): Song?
 
     @Query("SELECT * FROM Song WHERE name = :name LIMIT 1")
     suspend fun getSongByName(name: String): Song?
@@ -59,7 +61,10 @@ interface SongDao {
     fun searchSongs(query: String): Flow<List<Song>>
 
     @Query("DELETE FROM Song WHERE id = :id")
-    suspend fun deleteSong(id: Int)
+    suspend fun deleteSongById(id: Int)
+
+    @Query("DELETE FROM Song WHERE uuid = :id")
+    suspend fun deleteSongByUuid(id: String)
 
     @Query("UPDATE Song SET timeHeard = timeHeard + :ms WHERE id = :songId")
     suspend fun addListenTime(songId: Int, ms: Long)

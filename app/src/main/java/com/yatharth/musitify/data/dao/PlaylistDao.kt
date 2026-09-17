@@ -1,11 +1,9 @@
 package com.yatharth.musitify.data.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.entity.Song
@@ -68,13 +66,19 @@ interface PlaylistDao {
     suspend fun getSongsForPlaylistSuspend(playlistId: Int): List<Song>
 
     @Query("DELETE FROM Playlist WHERE id = :id")
-    suspend fun delete(id: Int)
+    suspend fun deleteById(id: Int)
+
+    @Query("DELETE FROM Playlist WHERE uuid = :uuid")
+    suspend fun deleteByUuid(uuid: String)
 
     @Query("UPDATE Playlist SET timeHeard = timeHeard + :ms WHERE id = :id")
     suspend fun addListenTime(id: Int, ms: Long)
 
     @Query("SELECT * FROM Playlist WHERE name = :name")
     suspend fun getPlaylistByName(name: String): Playlist?
+
+    @Query("SELECT * FROM Playlist WHERE uuid = :uuid")
+    suspend fun getPlaylistByUuid(uuid: String): Playlist?
 
     @Query("SELECT * FROM Playlist WHERE id = :id")
     suspend fun getPlaylistById(id: Int): Playlist?

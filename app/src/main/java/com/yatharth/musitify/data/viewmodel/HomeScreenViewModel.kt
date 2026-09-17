@@ -145,7 +145,7 @@ class HomeScreenViewModel @Inject constructor(
 
     fun deleteSong(index: Int) {
         viewModelScope.launch {
-            songRepository.deleteSong(id = index)
+            songRepository.deleteSongById(id = index)
         }
     }
 
@@ -157,7 +157,7 @@ class HomeScreenViewModel @Inject constructor(
 
     fun deletePlaylist(index: Int) {
         viewModelScope.launch {
-            playlistRepository.deletePlaylist(id = index)
+            playlistRepository.deletePlaylistById(id = index)
         }
     }
 
@@ -165,6 +165,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
 //            syncController.sendData()
             actionController.pushActions()
+            actionController.pullActions()
         }
     }
 

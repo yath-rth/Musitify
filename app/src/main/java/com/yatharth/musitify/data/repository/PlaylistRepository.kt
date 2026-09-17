@@ -11,20 +11,17 @@ import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.entity.SongToPlaylist
 import com.yatharth.musitify.network.model.NSong
-import com.yatharth.musitify.util.ConvertSong
 import com.yatharth.musitify.util.SongMedia.cachePlaylistCover
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.io.IOException
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.min
@@ -81,25 +78,45 @@ class PlaylistRepository @Inject constructor(
         }
     }
 
+    suspend fun createPlaylistFromSync(
+        playlistUuid: String?,
+        payload: String?
+    ) {
+        if (playlistUuid == null || payload == null) throw IOException("Song uuid or payload is wrong")
+        val jsonObject = Json.parseToJsonElement(payload).jsonObject
+        val name = jsonObject["name"]?.jsonPrimitive?.content
+            ?: throw IOException("Name not provided for playlist")
+        val createdAt = jsonObject["created_at"]?.jsonPrimitive?.content?.toLongOrNull()
+            ?: System.currentTimeMillis()
+        createPlaylist(
+            name = name,
+            uuid = UUID.fromString(playlistUuid),
+            record = false,
+            createdAt = createdAt
+        )
+    }
+
     suspend fun createPlaylist(
         name: String,
-        uuid: UUID? = null
+        uuid: UUID? = null,
+        record: Boolean = true,
+        createdAt: Long = System.currentTimeMillis()
     ): Playlist = withContext(Dispatchers.IO) {
         val existing = playlistDao.getPlaylistByName(name)
 
         val playlistId: Int
         if (existing != null) {
-            Log.d(TAG, "Playlist '$name' already exists, adding songs to it")
+            Log.d(TAG, "Playlist '$name' already exists")
             existing
         } else {
             val playlist = Playlist(
                 name = name,
                 timeHeard = 0,
-                createdAt = System.currentTimeMillis(),
+                createdAt = createdAt,
                 uuid = uuid ?: UUID.randomUUID()
             )
             val id = playlistDao.addPlaylist(playlist)
-            actionRepository.recordPlaylistCreated(
+            if (record) actionRepository.recordPlaylistCreated(
                 playlistUuid = playlist.uuid.toString(),
                 name = playlist.name,
                 createdAt = playlist.createdAt
@@ -158,9 +175,10 @@ class PlaylistRepository @Inject constructor(
             songToPlaylistDao.addSongsToPlaylist(
                 validSongs.keys.mapIndexed { i, songId ->
                     actionRepository.recordSongAddedToPlaylist(
-                        songUuid = songs[songId]?.uuid.toString(),
+                        song = songs[songId],
                         playlistUuid = existingPlaylist.uuid.toString(),
-                        position = position + i
+                        position = position + i,
+                        added_on = System.currentTimeMillis()
                     )
 
                     SongToPlaylist(
@@ -180,9 +198,10 @@ class PlaylistRepository @Inject constructor(
             songToPlaylistDao.addSongsToPlaylist(
                 validSongs.keys.mapIndexed { i, songId ->
                     actionRepository.recordSongAddedToPlaylist(
-                        songUuid = songs[songId]?.uuid.toString(),
+                        song = songs[songId],
                         playlistUuid = playlist.uuid.toString(),
-                        position = position + i
+                        position = position + i,
+                        added_on = System.currentTimeMillis(),
                     )
 
                     SongToPlaylist(
@@ -208,22 +227,78 @@ class PlaylistRepository @Inject constructor(
         return playlistDao.getSongsForPlaylist(playlistId)
     }
 
-    suspend fun deletePlaylist(id: Int) {
+    suspend fun deletePlaylistById(
+        id: Int,
+        record: Boolean = true
+    ) {
         val playlist = playlistDao.getPlaylistById(id) ?: throw IOException("Invalid playlist id")
-        actionRepository.recordPlaylistDeleted(playlist.uuid.toString())
-        playlistDao.delete(id)
+        if (record) actionRepository.recordPlaylistDeleted(playlist.uuid.toString())
+        playlistDao.deleteById(id)
     }
+
+    suspend fun deletePlaylistByUuid(
+        uuid: String?,
+        record: Boolean = true
+    ) {
+        if (uuid == null) throw IOException("UUID can not be null")
+        val playlist =
+            playlistDao.getPlaylistByUuid(uuid) ?: throw IOException("Invalid playlist uuid")
+        if (record) actionRepository.recordPlaylistDeleted(playlist.uuid.toString())
+        playlistDao.deleteByUuid(uuid)
+    }
+
+
+    suspend fun addSongToPlaylistSync(
+        songUuid: String?, playlistUuid: String?, payload: String?
+    ) =
+        withContext(Dispatchers.IO) {
+            val song = songDao.getSongByUuid(songUuid ?: throw IOException("Invalid song uuid"))
+                ?: throw IOException("Song doesnt exist $songUuid")
+            val playlist =
+                playlistDao.getPlaylistByUuid(
+                    playlistUuid ?: throw IOException("Invalid playlist id")
+                ) ?: throw IOException("Playlist doesnt exist")
+
+            val position = if (payload != null) {
+                val jsonObject = Json.parseToJsonElement(payload).jsonObject
+                jsonObject["position"]?.jsonPrimitive?.content?.toInt()
+                    ?: 0
+            } else null
+
+            addSongsToPlaylist(playlist, mapOf(song.id to song))
+        }
 
     suspend fun removeSong(songId: Int, playlistId: Int) {
         val song = songDao.getSongById(songId) ?: throw IOException("Invalid song id")
         val playlist =
             playlistDao.getPlaylistById(playlistId) ?: throw IOException("Invalid playlist id")
 
+        val songToPlaylist = songToPlaylistDao.findBySongUuidAndPlaylistUuid(
+            song.uuid.toString(),
+            playlist.uuid.toString()
+        ) ?: throw IOException("Song not in playlist")
+
         actionRepository.recordSongRemovedFromPlaylist(
             song.uuid.toString(),
             playlist.uuid.toString()
         )
-        songToPlaylistDao.remove(songId, playlistId)
+        songToPlaylistDao.removeSong(songToPlaylist)
         Log.d("Temp", "Removed song $songId from $playlistId")
+    }
+
+    suspend fun removeSongFromPlaylistSync(songUuid: String?, playlistUuid: String?) {
+        val song = songDao.getSongByUuid(songUuid ?: throw IOException("Invalid song uuid"))
+            ?: throw IOException("Song doesnt exist $songUuid")
+        val playlist =
+            playlistDao.getPlaylistByUuid(
+                playlistUuid ?: throw IOException("Invalid playlist id")
+            ) ?: throw IOException("Playlist doesnt exist")
+
+        val songToPlaylist = songToPlaylistDao.findBySongUuidAndPlaylistUuid(
+            song.uuid.toString(),
+            playlist.uuid.toString()
+        ) ?: throw IOException("Song not in playlist")
+
+        songToPlaylistDao.removeSong(songToPlaylist)
     }
 }

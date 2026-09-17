@@ -19,8 +19,11 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
+import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,9 +36,23 @@ class SongRepository @Inject constructor(
 ) {
     private val TAG = "SongRepository"
 
+    private fun getBaseDir(): String {
+        return context.getExternalFilesDir(null)?.absolutePath
+            ?: throw IOException("External storage not available")
+    }
+
     suspend fun downloadSong(
         url: String = "https://www.youtube.com/watch?v=_bSXY75R3Wc",
+        downloaded_at: Long = System.currentTimeMillis(),
+        songUUID: UUID = UUID.randomUUID(),
+        record: Boolean = true
     ): Song? = withContext(Dispatchers.IO) {
+
+        // Check to see if it is a new song or else return the existing instead of wasting time
+        // downloading a pre-existing song
+        val exists = songDao.getSongByUrl(url = url)
+        if (exists != null) return@withContext exists
+
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(context))
         }
@@ -47,7 +64,7 @@ class SongRepository @Inject constructor(
             val result = module.callAttr(
                 "downloadSong",
                 url,
-                context.getExternalFilesDir(null)?.absolutePath
+                getBaseDir()
             )
             val songPath = convertSong.invoke(result)
             val songName = result?.callAttr("get", "title")?.toString() ?: "unknown"
@@ -61,20 +78,20 @@ class SongRepository @Inject constructor(
                 artist = artist,
                 length = durationMs ?: 0,
                 timeHeard = 0,
-                filePath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songPath.mp3",
-                artPath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songPath.webp",
-                downloadedAt = System.currentTimeMillis(),
+                filePath = getBaseDir() + File.separator + "$songPath.mp3",
+                artPath = getBaseDir() + File.separator + "$songPath.webp",
+                downloadedAt = downloaded_at,
                 url = url,
-                uuid = UUID.randomUUID()
+                uuid = songUUID
             )
             val insertedId = songDao.addSong(song)
             val insertedSong = if (insertedId != -1L) {
                 song.copy(id = insertedId.toInt())
             } else {
-                songDao.getSongByUrl(song.url) ?: song
+                songDao.getSongByUrl(song.url)
             }
 
-            actionRepository.likedSong(insertedSong)
+            if (insertedSong != null && record) actionRepository.likedSong(insertedSong)
             insertedSong
         } catch (e: Exception) {
             Log.e(TAG, e.message ?: "Error somewhere")
@@ -84,7 +101,7 @@ class SongRepository @Inject constructor(
 
     suspend fun downloadSongsFromSync(
         nSongs: List<NSong>,
-        outputDir: String? = context.getExternalFilesDir(null)?.absolutePath,
+        outputDir: String = getBaseDir(),
         maxConcurrent: Int = 5,
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> }
     ): Map<String, Song> = withContext(Dispatchers.IO) {
@@ -95,10 +112,14 @@ class SongRepository @Inject constructor(
         val module = py.getModule("downloader")
         val total = nSongs.size
 
-        val completedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val existingSongs = songDao.getSongsByUrls(urls = nSongs.map { it.url })
+        val existingSongsUrls = existingSongs.map { it.url }
+        val newSongs = nSongs.filter { !existingSongsUrls.contains(it.url) }
+
+        val completedCount = AtomicInteger(0)
         val semaphore = Semaphore(maxConcurrent)
 
-        val songMap = nSongs.map { nSong ->
+        val songMap = newSongs.map { nSong ->
             async(Dispatchers.IO) {
                 semaphore.withPermit {
                     try {
@@ -117,8 +138,8 @@ class SongRepository @Inject constructor(
                             artist = artist,
                             length = durationMs ?: 0,
                             timeHeard = 0,
-                            filePath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songPath.mp3",
-                            artPath = context.getExternalFilesDir(null)?.absolutePath + File.separator + "$songPath.webp",
+                            filePath = outputDir + File.separator + "$songPath.mp3",
+                            artPath = outputDir + File.separator + "$songPath.webp",
                             downloadedAt = nSong.downloaded_at,
                             url = nSong.url,
                             uuid = UUID.fromString(nSong.id)
@@ -128,9 +149,9 @@ class SongRepository @Inject constructor(
                         val storedSong = if (insertedId != -1L) {
                             song.copy(id = insertedId.toInt())
                         } else {
-                            songDao.getSongByUrl(song.url) ?: song
+                            songDao.getSongByUrl(song.url)
                         }
-                        Pair(nSong.id, storedSong)
+                        if (storedSong != null) Pair(nSong.id, storedSong) else null
                     } catch (e: Exception) {
                         Log.e(TAG, e.message ?: "Error somewhere")
                         null
@@ -145,23 +166,39 @@ class SongRepository @Inject constructor(
             .toMap()
 
         actionRepository.likedSongs(songMap.values.toList())
-        songMap
+        songMap + existingSongs.associateBy { it.uuid.toString() }
     }
 
     val allSongs = songDao.getAllSongs()
 
     fun getFilteredSongs(query: String) = songDao.searchSongs(query)
 
-    suspend fun deleteSong(id: Int) {
-        val song = songDao.getSongById(id) ?: return
+    suspend fun deleteSongById(
+        id: Int, record: Boolean = true
+    ) {
+        val song = songDao.getSongById(id) ?: throw IOException("Invalid song uuid")
+        songDao.deleteSongById(id)
+        if (record) actionRepository.unlikedSong(song.uuid.toString())
+
         val audioFile = File(song.filePath)
         val artFile = File(song.artPath)
 
         if (audioFile.exists()) audioFile.delete()
         if (artFile.exists()) artFile.delete()
+    }
 
-        actionRepository.unlikedSong(song.uuid.toString())
-        songDao.deleteSong(id)
+    suspend fun deleteSongByUUID(
+        id: String, record: Boolean = true
+    ) {
+        val song = songDao.getSongByUuid(id) ?: throw IOException("Invalid song uuid")
+        songDao.deleteSongByUuid(id)
+        if (record) actionRepository.unlikedSong(song.uuid.toString())
+
+        val audioFile = File(song.filePath)
+        val artFile = File(song.artPath)
+
+        if (audioFile.exists()) audioFile.delete()
+        if (artFile.exists()) artFile.delete()
     }
 
     suspend fun getSongsByUrl(urls: List<String>): List<Song> {
@@ -177,9 +214,20 @@ class SongRepository @Inject constructor(
         Log.d("Temp", "Completed migration like behaviour")
     }
 
-    suspend fun addSongFromSync(songUuid: String?, payload: String?){
-        if(songUuid == null || payload == null) return
+    suspend fun addSongFromSync(songUuid: String?, payload: String?) {
+        if (songUuid == null || payload == null) throw IOException("Song uuid or payload is wrong")
         val jsonObject = Json.parseToJsonElement(payload).jsonObject
-        
+        val url = jsonObject["url"]?.jsonPrimitive?.content
+            ?: throw IOException("Url not provided for song")
+        val downloaded_at = jsonObject["downloaded_at"]?.jsonPrimitive?.content?.toLongOrNull()
+            ?: System.currentTimeMillis()
+
+        val downloadedSong = downloadSong(
+            url = url,
+            songUUID = UUID.fromString(songUuid),
+            downloaded_at = downloaded_at,
+            record = false
+        )
+        Log.d(TAG, "Downloaded song ${downloadedSong?.name}")
     }
 }

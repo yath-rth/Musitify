@@ -18,6 +18,9 @@ interface SyncActionDao {
     @Query("SELECT * FROM Actions WHERE actionUuid = :actionUuid")
     suspend fun getByActionUuid(actionUuid: String): SyncAction?
 
+    @Query("SELECT * FROM Actions WHERE actionUuid in (:actionUuids)")
+    suspend fun getByActionUuids(actionUuids: List<String>): List<SyncAction?>
+
     @Insert(onConflict = IGNORE)
     suspend fun insert(action: SyncAction): Long
 

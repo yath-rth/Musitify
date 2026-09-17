@@ -32,7 +32,7 @@ class SyncController @Inject constructor(
 ) {
     private val TAG = "SyncController"
     private val client = OkHttpClient()
-    private val URL = "http://10.122.46.9:8080/sync"
+    private val URL = "http://localhost:8080/sync"
     val JSON: MediaType? = "application/json; charset=utf-8".toMediaTypeOrNull()
 
     suspend fun sendData() {

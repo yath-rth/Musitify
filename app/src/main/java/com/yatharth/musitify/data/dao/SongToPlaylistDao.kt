@@ -29,7 +29,15 @@ WHERE playListId = :playlistId
     )
     suspend fun getLastPosition(playlistId: Int): Int
 
+    @Delete
+    suspend fun removeSong(songPlaylist: SongToPlaylist)
+
     @Query("DELETE FROM SONGTOPLAYLIST WHERE songId = :songId AND playListId = :playlistId")
     suspend fun remove(songId: Int, playlistId: Int)
 
+    @Query("SELECT * FROM SONGTOPLAYLIST where song_uuid = :songUuid AND playlist_uuid = :playlistUuid")
+    suspend fun findBySongUuidAndPlaylistUuid(
+        songUuid: String,
+        playlistUuid: String
+    ): SongToPlaylist?
 }
