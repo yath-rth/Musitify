@@ -104,14 +104,22 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    private val _sortMode = MutableStateFlow(SortMode.PLAYS_DESC)
-    val sortMode = _sortMode.asStateFlow()
+    private val _songSortMode = MutableStateFlow(SortMode.PLAYS_DESC)
+    val songSortMode = _songSortMode.asStateFlow()
 
-    fun onSortModeToggle() {
-        _sortMode.value = _sortMode.value.next()
+    fun onSongSortModeToggle() {
+        _songSortMode.value = _songSortMode.value.next()
     }
 
-    val sortedSongs = combine(allSongs, _sortMode) { songs, mode ->
+
+    private val _playlistSortMode = MutableStateFlow(SortMode.PLAYS_DESC)
+    val playlistSortMode = _playlistSortMode.asStateFlow()
+
+    fun onPlaylistSortModeToggle() {
+        _playlistSortMode.value = _playlistSortMode.value.next()
+    }
+
+    val sortedSongs = combine(allSongs, _songSortMode) { songs, mode ->
         when (mode) {
             SortMode.DOWNLOADED_DESC -> songs.sortedByDescending { it.downloadedAt }
             SortMode.DOWNLOADED_ASC -> songs.sortedBy { it.downloadedAt }
@@ -119,6 +127,16 @@ class HomeScreenViewModel @Inject constructor(
             SortMode.PLAYS_ASC -> songs.sortedBy { playCountOf(it) }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val sortedPlaylists = combine(playlists, _playlistSortMode) { playlists, mode ->
+        when (mode) {
+            SortMode.DOWNLOADED_DESC -> playlists.sortedByDescending { it.playlist.createdAt }
+            SortMode.DOWNLOADED_ASC -> playlists.sortedBy { it.playlist.createdAt }
+            SortMode.PLAYS_DESC -> playlists.sortedByDescending { it.playlist.timeHeard }
+            SortMode.PLAYS_ASC -> playlists.sortedBy { it.playlist.timeHeard }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()

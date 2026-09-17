@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
-import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -64,7 +63,7 @@ fun HomeScreen(
     val filteredSongs by homeScreenViewModel.searchResults.collectAsState()
     val uiState by playbackControllerViewModel.uiState.collectAsState()
     val addState by addSongsViewModel.state.collectAsState()
-    val sortMode by homeScreenViewModel.sortMode.collectAsState()
+    val songSortMode by homeScreenViewModel.songSortMode.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var url by remember { mutableStateOf("") }
@@ -77,10 +76,11 @@ fun HomeScreen(
     val songFilterQuery by homeScreenViewModel.searchQuery.collectAsState()
     var selectedSongIds by remember { mutableStateOf(setOf<Song>()) }
 
-    val playlists by homeScreenViewModel.playlists.collectAsState()
+    val playlists by homeScreenViewModel.sortedPlaylists.collectAsState()
     val playlistState by homeScreenViewModel.state.collectAsState()
     val songsInPlaylist by homeScreenViewModel.songsInPlaylist.collectAsState()
     val selectedPlaylistId by homeScreenViewModel.playlistId.collectAsState()
+    val playlistSortMode by homeScreenViewModel.playlistSortMode.collectAsState()
 
     var songToDelete by remember { mutableStateOf<Pair<Int, String>?>(null) }
     var playlistToDelete by remember { mutableStateOf<Playlist?>(null) }
@@ -103,7 +103,9 @@ fun HomeScreen(
         containerColor = background,
         bottomBar = {
             Column(
-                modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding(),
                 horizontalAlignment = Alignment.End
             ) {
                 PlaybackControls(
@@ -121,7 +123,7 @@ fun HomeScreen(
         floatingActionButton = {
             Row(
                 verticalAlignment = Alignment.CenterVertically
-            ){
+            ) {
                 CustomCircularButton(
                     modifier = Modifier.size(56.dp),
                     onClick = { homeScreenViewModel.syncLibrary() },
@@ -163,16 +165,30 @@ fun HomeScreen(
         ) {
 
             item {
-                Text(
-                    text = selectedPlaylist?.playlist?.name?.uppercase() ?: "PLAYLISTS",
-                    color = text,
-                    style = adaptiveTypography().labelLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 2.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = selectedPlaylist?.playlist?.name?.uppercase() ?: "PLAYLISTS",
+                        color = text,
+                        style = adaptiveTypography().labelLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 2.sp,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+
+                    if (selectedPlaylist == null) {
+                        SortIcon(
+                            mode = playlistSortMode,
+                            onClick = {
+                                homeScreenViewModel.onPlaylistSortModeToggle()
+                            }
+                        )
+                    }
+                }
 
                 AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
                     PlaylistCarousel(
@@ -232,9 +248,9 @@ fun HomeScreen(
                         )
 
                         SortIcon(
-                            mode = sortMode,
+                            mode = songSortMode,
                             onClick = {
-                                homeScreenViewModel.onSortModeToggle()
+                                homeScreenViewModel.onSongSortModeToggle()
                             }
                         )
                     }
