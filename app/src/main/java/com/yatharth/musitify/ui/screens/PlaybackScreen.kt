@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.screens
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -9,7 +10,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -24,20 +27,33 @@ import java.util.UUID
 fun PlaybackScreen(
     modifier: Modifier = Modifier,
     song: Song,
-    imageSize: Int = 85,
+    imageSize: Int = 100,
+    playing: Boolean
 ) {
-    val infinite = rememberInfiniteTransition()
+    val rotation = remember { Animatable(0f) }
 
-    val rotation by infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            tween(
-                durationMillis = 6000,
-                easing = LinearEasing
+    LaunchedEffect(playing) {
+        if (playing) {
+            rotation.animateTo(
+                targetValue = rotation.value + 360f,
+                animationSpec = tween(
+                    durationMillis = 10000,
+                    easing = LinearEasing
+                )
             )
-        )
-    )
+
+            // Keep rotating forever
+            while (true) {
+                rotation.animateTo(
+                    targetValue = rotation.value + 360f,
+                    animationSpec = tween(
+                        durationMillis = 10000,
+                        easing = LinearEasing
+                    )
+                )
+            }
+        }
+    }
 
     ShadowBox(
         modifier = modifier.padding(16.dp),
@@ -51,7 +67,7 @@ fun PlaybackScreen(
                 .fillMaxWidth()
                 .padding(16.dp)
                 .graphicsLayer {
-                    rotationZ = rotation
+                    rotationZ = rotation.value
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -67,6 +83,7 @@ fun PlaybackScreen(
 @Composable
 fun PlaybackScreenPreview() {
     PlaybackScreen(
+        playing = true,
         song = Song(
             id = 1,
             name = "Blinding Lights",
