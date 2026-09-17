@@ -2,6 +2,7 @@ package com.yatharth.musitify.data
 
 import android.content.Context
 import androidx.room.Room
+import com.yatharth.musitify.data.dao.ListeningSessionDao
 import com.yatharth.musitify.data.dao.PlaylistDao
 import com.yatharth.musitify.data.dao.SettingsDao
 import com.yatharth.musitify.data.dao.SongDao
@@ -14,6 +15,7 @@ import com.yatharth.musitify.data.migrations.MIGRATION_4_5
 import com.yatharth.musitify.data.migrations.MIGRATION_5_6
 import com.yatharth.musitify.data.migrations.MIGRATION_6_7
 import com.yatharth.musitify.data.migrations.MIGRATION_7_8
+import com.yatharth.musitify.data.migrations.MIGRATION_8_9
 import com.yatharth.musitify.util.UUIDConverter
 import dagger.Module
 import dagger.Provides
@@ -39,7 +41,7 @@ object DatabaseModule {
         )
             .addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
+                MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
             )
             .build()
     }
@@ -68,4 +70,9 @@ object DatabaseModule {
     fun provideSyncActionDao(
         db: MusitifyDatabase
     ): SyncActionDao = db.syncActionDao()
+
+    @Provides
+    fun provideListeningSessionDao(
+        db: MusitifyDatabase
+    ): ListeningSessionDao = db.listeningSessionDao()
 }

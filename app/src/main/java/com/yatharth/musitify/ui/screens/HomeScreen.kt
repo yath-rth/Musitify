@@ -76,7 +76,8 @@ fun HomeScreen(
     modifier: Modifier,
     homeScreenViewModel: HomeScreenViewModel = hiltViewModel(),
     playbackControllerViewModel: PlaybackControllerViewModel = hiltViewModel(),
-    addSongsViewModel: AddSongsViewModel = hiltViewModel()
+    addSongsViewModel: AddSongsViewModel = hiltViewModel(),
+    onOpenStats: () -> Unit = {}
 ) {
     val TAG = "HomeScreen"
 
@@ -137,7 +138,8 @@ fun HomeScreen(
                     onNext = { playbackControllerViewModel.next() },
                     onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
                     addSong = { showAddDialog = true },
-                    createPlaylist = { showPlaylistDialog = true }
+                    createPlaylist = { showPlaylistDialog = true },
+                    onStats = onOpenStats
                 )
             }
         },

@@ -2,6 +2,8 @@ package com.yatharth.musitify.data.repository
 
 import android.content.ComponentName
 import android.content.Context
+import android.app.PendingIntent
+import android.os.Bundle
 import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -10,8 +12,10 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.yatharth.musitify.data.dao.ListeningSessionDao
 import com.yatharth.musitify.data.dao.PlaylistDao
 import com.yatharth.musitify.data.dao.SongDao
+import com.yatharth.musitify.data.entity.ListeningSession
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.music.MusicPlayerManager
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -26,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.collections.map
@@ -37,7 +42,8 @@ import kotlin.time.Duration.Companion.seconds
 class MediaControllerRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val songDao: SongDao,
-    private val playlistDao: PlaylistDao
+    private val playlistDao: PlaylistDao,
+    private val listeningSessionDao: ListeningSessionDao
 ) {
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var positionPollingJob: Job? = null
@@ -54,9 +60,39 @@ class MediaControllerRepository @Inject constructor(
     private var lastPositionMs: Long = 0
 
     private var activePlaylistId: Int? = null
+    private var activePlaylistName: String? = null
+    private val songDetailsById = mutableMapOf<Int, Song>()
 
-    fun setActivePlaylist(playlistId: Int?) {
+    /**
+     * Builds the queue and starts playback. Also snapshots the songs and the
+     * active playlist so listen-time tracking can record denormalized stat
+     * rows (names survive library deletions).
+     */
+    fun startPlayback(songs: List<Song>, startIndex: Int, playlistId: Int?) {
         activePlaylistId = playlistId
+        activePlaylistName = null
+        songDetailsById.clear()
+        songs.forEach { songDetailsById[it.id] = it }
+
+        scope.launch {
+            activePlaylistName = playlistId?.let { playlistDao.getPlaylistById(it)?.name }
+        }
+
+        val mediaItems = songs.map { song ->
+            MediaItem.Builder()
+                .setUri(song.filePath)
+                .setMediaMetadata(
+                    androidx.media3.common.MediaMetadata.Builder()
+                        .setTitle(song.name)
+                        .setArtworkUri(song.artPath.toUri())
+                        .setExtras(Bundle().apply { putInt("songId", song.id) })
+                        .build()
+                )
+                .build()
+        }
+        controller.value?.setMediaItems(mediaItems, startIndex, 0L)
+        controller.value?.prepare()
+        controller.value?.play()
     }
 
     fun connect() {
@@ -133,9 +169,28 @@ class MediaControllerRepository @Inject constructor(
         val msToWrite = accumulatedMs
         accumulatedMs = 0
 
+        val song = songDetailsById[songId]
+        val playlistId = activePlaylistId
+        val playlistName = activePlaylistName
+
         scope.launch(Dispatchers.IO) {
             songDao.addListenTime(songId, msToWrite)
-            activePlaylistId?.let { playlistDao.addListenTime(it, msToWrite) }
+            if (playlistId != null) {
+                playlistDao.addListenTime(playlistId, msToWrite)
+            }
+            listeningSessionDao.insert(
+                ListeningSession(
+                    songId = songId,
+                    playlistId = playlistId,
+                    songName = song?.name,
+                    artistName = song?.artist,
+                    playlistName = playlistName,
+                    songArtPath = song?.artPath,
+                    songLength = song?.length ?: 0,
+                    startTimeMs = System.currentTimeMillis() - msToWrite,
+                    durationMs = msToWrite
+                )
+            )
         }
     }
 

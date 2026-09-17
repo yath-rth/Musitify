@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.ArrowForwardIos
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Repeat
@@ -37,7 +38,8 @@ fun PlaybackControls(
     onNext: () -> Unit,
     addSong: () -> Unit,
     createPlaylist: () -> Unit,
-    onRepeatToggle: () -> Unit
+    onRepeatToggle: () -> Unit,
+    onStats: () -> Unit = {}
 ) {
 
     val repeatIcon = when (uiState.repeatMode) {
@@ -109,6 +111,16 @@ fun PlaybackControls(
                         imageVector = repeatIcon,
                         contentDescription = null,
                         tint = if (uiState.repeatMode == 0) cardBorder.copy(alpha = 0.5f) else cardBorder
+                    )
+                }
+
+                CustomCircularButton(
+                    onClick = onStats,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Insights,
+                        contentDescription = null,
+                        tint = cardBorder
                     )
                 }
 

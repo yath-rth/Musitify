@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.yatharth.musitify.service.IdManager
@@ -12,6 +16,7 @@ import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SettingsRepository
 import com.yatharth.musitify.data.repository.SongRepository
 import com.yatharth.musitify.ui.screens.HomeScreen
+import com.yatharth.musitify.ui.screens.StatsScreen
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
 import kotlinx.coroutines.launch
@@ -47,9 +52,19 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MusitifyTheme {
-                HomeScreen(
-                    modifier = Modifier
-                )
+                var showStats by rememberSaveable { mutableStateOf(false) }
+
+                if (showStats) {
+                    StatsScreen(
+                        modifier = Modifier,
+                        onClose = { showStats = false }
+                    )
+                } else {
+                    HomeScreen(
+                        modifier = Modifier,
+                        onOpenStats = { showStats = true }
+                    )
+                }
             }
         }
     }
