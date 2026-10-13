@@ -65,6 +65,7 @@ fun StatsScreen(
 ) {
     val uiState by playbackControllerViewModel.uiState.collectAsState()
     val stats by statsViewModel.stats.collectAsState()
+    val songCount by statsViewModel.songCount.collectAsState()
 
     LaunchedEffect(Unit) { statsViewModel.refresh() }
 
@@ -115,6 +116,7 @@ fun StatsScreen(
             if (!stats.hasAnyListenTime) {
                 item { EmptyStatsCard() }
             } else {
+                item { HeroTotalCountCard(songCount) }
                 item { HeroTotalsCard(stats) }
                 item { PeriodCardsRow(stats) }
                 if (stats.dailySeries.any { it.totalMs > 0 }) {
@@ -144,18 +146,18 @@ fun StatsScreen(
                         }
                     }
                 }
-                item {
-                    TopListCard(
-                        title = "TOP ARTISTS",
-                        subtitle = "artists you listen to the most",
-                        emptyLabel = "No artist data yet",
-                        hasData = stats.topArtists.isNotEmpty()
-                    ) {
-                        stats.topArtists.forEachIndexed { index, artist ->
-                            ArtistStatRow(index, artist, stats.topArtists.firstOrNull()?.totalMs ?: 0)
-                        }
-                    }
-                }
+//                item {
+//                    TopListCard(
+//                        title = "TOP ARTISTS",
+//                        subtitle = "artists you listen to the most",
+//                        emptyLabel = "No artist data yet",
+//                        hasData = stats.topArtists.isNotEmpty()
+//                    ) {
+//                        stats.topArtists.forEachIndexed { index, artist ->
+//                            ArtistStatRow(index, artist, stats.topArtists.firstOrNull()?.totalMs ?: 0)
+//                        }
+//                    }
+//                }
                 item {
                     TopListCard(
                         title = "TOP PLAYLISTS",
@@ -227,6 +229,40 @@ private fun HeroTotalsCard(stats: StatsSnapshot) {
                 color = text.copy(alpha = 0.6f),
                 style = adaptiveTypography().bodySmall
             )
+        }
+    }
+}
+
+@Composable
+private fun HeroTotalCountCard(count: Long) {
+    ShadowBox(
+        modifier = Modifier.fillMaxWidth(),
+        bgColor = itemsBg,
+        alignment = Alignment.TopStart
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "TOTAL NUMBER OF SONGS",
+                color = text,
+                style = adaptiveTypography().labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.5.sp
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = count.toString(),
+                color = accentColor1,
+                style = adaptiveTypography().titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+//            Spacer(Modifier.height(8.dp))
+//            Text(
+//                text = "${stats.listensThisMonth} listening sessions this month",
+//                color = text.copy(alpha = 0.6f),
+//                style = adaptiveTypography().bodySmall
+//            )
         }
     }
 }

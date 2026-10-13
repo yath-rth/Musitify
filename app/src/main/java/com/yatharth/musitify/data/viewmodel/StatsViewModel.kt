@@ -1,6 +1,8 @@
 package com.yatharth.musitify.data.viewmodel
 
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.yatharth.musitify.data.repository.StatsComputer
 import com.yatharth.musitify.data.repository.StatsRepository
@@ -20,6 +22,11 @@ class StatsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val refreshTrigger = MutableStateFlow(0)
+    val songCount = statsRepository.totalCount.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        0L
+    )
 
     val stats: StateFlow<StatsSnapshot> = combine(
         statsRepository.sessions,

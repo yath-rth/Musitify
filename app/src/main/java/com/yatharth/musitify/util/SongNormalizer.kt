@@ -44,6 +44,8 @@ object SongNormalizer {
         s = s.replace("[^a-z0-9\\s]".toRegex(), "").replace("\\s+".toRegex(), " ")
             .trim { it <= ' ' }
 
+        s = s.replace("nana", "")
+
         return NormalizedSong(s, versionTag)
     }
 

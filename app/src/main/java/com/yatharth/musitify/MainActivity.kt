@@ -17,6 +17,7 @@ import com.yatharth.musitify.data.repository.SettingsRepository
 import com.yatharth.musitify.data.repository.SongRepository
 import com.yatharth.musitify.ui.screens.HomeScreen
 import com.yatharth.musitify.ui.screens.StatsScreen
+import com.yatharth.musitify.util.LegacyFixer
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
 import kotlinx.coroutines.launch
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var playlistRepository: PlaylistRepository
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var idGenerator: IdManager
+    @Inject lateinit var legacyFixer: LegacyFixer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

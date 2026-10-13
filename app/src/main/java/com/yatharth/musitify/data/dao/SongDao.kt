@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.yatharth.musitify.data.entity.Song
 import kotlinx.coroutines.flow.Flow
 
@@ -36,6 +37,9 @@ interface SongDao {
 
     @Query("SELECT * FROM Song WHERE url = :url")
     suspend fun getSongByUrl(url: String): Song?
+
+    @Update
+    suspend fun updateSong(song: Song)
 
     @Query(
         """
@@ -72,4 +76,6 @@ interface SongDao {
     @Query("UPDATE Song SET length = :length WHERE id = :songId")
     suspend fun updateLength(songId: Int, length: Long)
 
+    @Query("SELECT COUNT(*) FROM Song")
+    fun getTotalNumOfSongs(): Flow<Long>
 }

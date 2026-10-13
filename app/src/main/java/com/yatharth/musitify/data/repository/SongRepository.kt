@@ -74,6 +74,17 @@ class SongRepository @Inject constructor(
             val durationMs = durationSeconds?.times(1000)
             val normalizedSongName = SongNormalizer.normalize(songName).normalizedTitle
 
+            val exists = songDao.getSongByName(normalizedSongName)
+            if (exists != null && exists.url.contains("legacy")) {
+                songDao.updateSong(exists.copy(url = url))
+                val audioFile = File(getBaseDir() + File.separator + "$songPath.mp3")
+                val artFile = File(getBaseDir() + File.separator + "$songPath.webp")
+
+                if (audioFile.exists()) audioFile.delete()
+                if (artFile.exists()) artFile.delete()
+                return@withContext exists.copy(url = url)
+            }
+
             val song = Song(
                 name = normalizedSongName,
                 artist = artist,
@@ -134,6 +145,17 @@ class SongRepository @Inject constructor(
                         val durationMs = durationSeconds?.times(1000)
                         val normalizedSongName = SongNormalizer.normalize(songName).normalizedTitle
 
+                        val exists = songDao.getSongByName(normalizedSongName)
+                        if (exists != null && exists.url.contains("legacy")) {
+                            songDao.updateSong(exists.copy(url = nSong.url))
+                            val audioFile = File(getBaseDir() + File.separator + "$songPath.mp3")
+                            val artFile = File(getBaseDir() + File.separator + "$songPath.webp")
+
+                            if (audioFile.exists()) audioFile.delete()
+                            if (artFile.exists()) artFile.delete()
+                            return@async Pair(nSong.id, exists.copy(url = nSong.url))
+                        }
+
                         val song = Song(
                             name = normalizedSongName,
                             artist = artist,
@@ -169,9 +191,7 @@ class SongRepository @Inject constructor(
         actionRepository.likedSongs(songMap.values.toList())
 
         val lookup = songMap + existingSongs.associateBy { it.uuid.toString() }
-        return@withContext nSongs.mapNotNull { nSong ->
-            lookup[nSong.id]?.let { nSong.id to it }
-        }.toMap()
+        return@withContext lookup
     }
 
     val allSongs = songDao.getAllSongs()

@@ -72,6 +72,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation("com.arthenica:ffmpeg-kit-next:8.1.0")
+
     var version = "2.8.4"
     implementation("androidx.room:room-runtime:$version")
     ksp("androidx.room:room-compiler:$version")

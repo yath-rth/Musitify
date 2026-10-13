@@ -4,6 +4,7 @@ import com.yatharth.musitify.data.dao.ListeningSessionDao
 import com.yatharth.musitify.data.dao.PlaylistDao
 import com.yatharth.musitify.data.dao.SongDao
 import com.yatharth.musitify.data.entity.ListeningSession
+import com.yatharth.musitify.util.SongMedia
 import kotlinx.coroutines.flow.Flow
 import java.util.Calendar
 import javax.inject.Inject
@@ -63,6 +64,8 @@ class StatsRepository @Inject constructor(
         const val LEGACY_BACKFILL_KEY = "legacy_listen_backfill"
         const val LEGACY_TIMESTAMP = 0L
     }
+
+    val totalCount = songDao.getTotalNumOfSongs()
 }
 
 data class DailyStat(
@@ -90,7 +93,7 @@ data class PlaylistStat(
     val playlistId: Int?,
     val name: String,
     val totalMs: Long,
-    val sessionCount: Int
+    val sessionCount: Int,
 )
 
 data class StatsSnapshot(
@@ -173,12 +176,12 @@ object StatsComputer {
 
         val topSongsAllTime = songAgg.mapNotNull { (id, list) ->
             toSongStat(id, list)
-        }.sortedByDescending { it.totalMs }.take(10)
+        }.sortedByDescending { it.fullPlays }.take(10)
 
         val topSongsThisMonth = songAgg.mapNotNull { (id, list) ->
             val monthList = list.filter { it.startTimeMs >= monthStart }
             if (monthList.isEmpty()) null else toSongStat(id, monthList)
-        }.sortedByDescending { it.totalMs }.take(10)
+        }.sortedByDescending { it.fullPlays }.take(10)
 
         val topArtists = artistAgg.mapNotNull { (name, list) ->
             ArtistStat(

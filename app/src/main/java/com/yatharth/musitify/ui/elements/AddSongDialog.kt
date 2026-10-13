@@ -6,23 +6,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,7 +40,6 @@ fun AddSongDialog(
     onModeChange: (Boolean) -> Unit,
     state: AddSongsUiState,
     onSubmit: () -> Unit,
-    onSuccess: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -114,43 +109,14 @@ fun AddSongDialog(
                     }
                 }
 
-                when (state) {
-                    is AddSongsUiState.Loading -> {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.height(10.dp), strokeWidth = 2.dp, color = accentColor2)
-                            Text(
-                                text = if (isPlaylistMode)
-                                    "DOWNLOADING (${state.completed}/${state.total})..."
-                                else "DOWNLOADING...",
-                                style = adaptiveTypography().labelSmall,
-                                color = text.copy(alpha = 0.7f),
-                                letterSpacing = 1.2.sp
-                            )
-                        }
-                    }
-                    is AddSongsUiState.Success -> {
-                        Text(
-                            text = "ADDED ${state.count} SONG${if (state.count != 1) "S" else ""}",
-                            style = adaptiveTypography().labelSmall,
-                            color = accentColor2,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.5.sp
-                        )
-                        onSuccess()
-                    }
-                    is AddSongsUiState.Error -> {
-                        Text(
-                            text = "FAILED: ${state.message}",
-                            style = adaptiveTypography().labelSmall,
-                            color = accentColor1,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.2.sp
-                        )
-                    }
-                    AddSongsUiState.Idle -> { /* nothing */ }
+                if (state is AddSongsUiState.Error) {
+                    Text(
+                        text = "FAILED: ${state.message}",
+                        style = adaptiveTypography().labelSmall,
+                        color = accentColor1,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.2.sp
+                    )
                 }
             }
         },
@@ -160,7 +126,7 @@ fun AddSongDialog(
                 bgColor = accentColor1.copy(alpha = 0.2f)
             ) {
                 Text(
-                    text = if (state is AddSongsUiState.Loading) "ADDING..." else "ADD",
+                    text = "ADD TO QUEUE",
                     style = adaptiveTypography().labelMedium,
                     color = accentColor1,
                     fontWeight = FontWeight.ExtraBold,

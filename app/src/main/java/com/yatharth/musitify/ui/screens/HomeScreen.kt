@@ -24,15 +24,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,9 +56,13 @@ import coil.compose.AsyncImage
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.entity.Song
+import com.yatharth.musitify.data.viewmodel.AddSongsUiState
 import com.yatharth.musitify.data.viewmodel.AddSongsViewModel
 import com.yatharth.musitify.data.viewmodel.HomeScreenViewModel
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
+import com.yatharth.musitify.service.DownloadJob
+import com.yatharth.musitify.service.DownloadStatus
+import com.yatharth.musitify.service.DownloadType
 import com.yatharth.musitify.ui.elements.AddSongDialog
 import com.yatharth.musitify.ui.elements.CustomAlertBox
 import com.yatharth.musitify.ui.elements.CustomCircularButton
@@ -85,6 +94,7 @@ fun HomeScreen(
     val filteredSongs by homeScreenViewModel.searchResults.collectAsState()
     val uiState by playbackControllerViewModel.uiState.collectAsState()
     val addState by addSongsViewModel.state.collectAsState()
+    val downloadJobs by addSongsViewModel.jobs.collectAsState()
     val songSortMode by homeScreenViewModel.songSortMode.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }
@@ -111,6 +121,15 @@ fun HomeScreen(
 
     var selectedPlaylist: PlaylistInfo? = remember(selectedPlaylistId) {
         playlists.firstOrNull { it.playlist.id == selectedPlaylistId }
+    }
+
+    // Once a URL is queued, close the dialog; the queue card shows progress from here.
+    LaunchedEffect(addState) {
+        if (addState is AddSongsUiState.Queued) {
+            showAddDialog = false
+            url = ""
+            addSongsViewModel.resetState()
+        }
     }
 
     BackHandler(
@@ -165,18 +184,6 @@ fun HomeScreen(
                         tint = cardBorder
                     )
                 }
-
-//                CustomCircularButton(
-//                    modifier = Modifier.size(56.dp),
-//                    onClick = { homeScreenViewModel.fetchLibrary() },
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Outlined.ArrowDownward,
-//                        contentDescription = "Fetch library",
-//                        modifier = Modifier.size(24.dp),
-//                        tint = cardBorder
-//                    )
-//                }
             }
         }
     ) { innerPadding ->
@@ -186,6 +193,21 @@ fun HomeScreen(
                 .padding(innerPadding)
                 .padding(8.dp)
         ) {
+
+            // ---- Download queue ----
+            if (downloadJobs.isNotEmpty()) {
+                item(key = "download_queue") {
+                    DownloadQueueCard(
+                        jobs = downloadJobs,
+                        onCancel = { addSongsViewModel.cancel(it) },
+                        onRetry = { addSongsViewModel.retry(it) },
+                        onClearFinished = { addSongsViewModel.clearFinished() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    )
+                }
+            }
 
             item {
                 Row(
@@ -291,9 +313,6 @@ fun HomeScreen(
                 AnimatedVisibility(visible = songsInPlaylist.isEmpty() && !isListMode) {
                     MusicCarousel(
                         songs = allSongs,
-//                        size = 140,
-//                        spacing = -5,
-//                        threshold = 0.5f,
                         scroll = false,
                         currentPlayingIndex = allSongs.indexOfFirst { it.name == uiState.currentTitle }
                             .coerceAtLeast(0),
@@ -388,10 +407,6 @@ fun HomeScreen(
                         if (isPlaylistMode) addSongsViewModel.addPlaylist(url)
                         else addSongsViewModel.addSingleSong(url)
                     }
-                },
-                onSuccess = {
-                    showAddDialog = false
-                    addSongsViewModel.resetState()
                 }
             )
         }
@@ -481,6 +496,172 @@ fun HomeScreen(
         }
     }
 }
+
+/**
+ * Download queue card. Active jobs are listed first, finished ones after.
+ * Shows the first few rows and expands on tap so a long queue doesn't
+ * push the whole library off screen.
+ */
+@Composable
+private fun DownloadQueueCard(
+    jobs: List<DownloadJob>,
+    onCancel: (Long) -> Unit,
+    onRetry: (Long) -> Unit,
+    onClearFinished: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val ordered = remember(jobs) { jobs.sortedBy { !it.isActive } } // stable: active first
+    val activeCount = jobs.count { it.isActive }
+    val hasFinished = jobs.any { !it.isActive }
+    val visible = if (expanded) ordered else ordered.take(COLLAPSED_ROWS)
+    val hiddenCount = ordered.size - visible.size
+
+    ShadowBox(modifier = modifier) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (activeCount > 0) "DOWNLOADS · $activeCount ACTIVE" else "DOWNLOADS",
+                    color = text,
+                    style = adaptiveTypography().labelLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 2.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                )
+                if (hasFinished) {
+                    TextButton(onClick = onClearFinished) {
+                        Text(
+                            text = "Clear",
+                            color = cardBorder,
+                            style = adaptiveTypography().labelMedium
+                        )
+                    }
+                }
+            }
+
+            visible.forEach { job ->
+                DownloadJobRow(
+                    job = job,
+                    onCancel = { onCancel(job.id) },
+                    onRetry = { onRetry(job.id) }
+                )
+            }
+
+            if (hiddenCount > 0 || expanded && ordered.size > COLLAPSED_ROWS) {
+                TextButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Text(
+                        text = if (expanded) "Show less" else "Show $hiddenCount more",
+                        color = cardBorder,
+                        style = adaptiveTypography().labelMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadJobRow(
+    job: DownloadJob,
+    onCancel: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val statusText = when (job.status) {
+        DownloadStatus.QUEUED -> "Waiting in queue"
+        DownloadStatus.RUNNING ->
+            if (job.type == DownloadType.PLAYLIST && job.total > 0)
+                "Downloading ${job.completed} of ${job.total}"
+            else "Downloading…"
+        DownloadStatus.COMPLETED ->
+            if (job.type == DownloadType.PLAYLIST && job.total > 1) "Done · ${job.total} songs"
+            else "Done"
+        DownloadStatus.FAILED -> job.error?.let { "Failed · $it" } ?: "Failed"
+        DownloadStatus.CANCELLED -> "Cancelled"
+    }
+
+    val statusColor =
+        if (job.status == DownloadStatus.FAILED) text else text.copy(alpha = 0.6f)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 6.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = (if (job.type == DownloadType.PLAYLIST) "Playlist · " else "Song · ") +
+                        displayUrl(job.url),
+                color = text,
+                style = adaptiveTypography().bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = statusText,
+                color = statusColor,
+                style = adaptiveTypography().labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (job.status == DownloadStatus.RUNNING) {
+                Spacer(modifier = Modifier.height(6.dp))
+                if (job.total > 0) {
+                    LinearProgressIndicator(
+                        progress = { (job.completed.toFloat() / job.total).coerceIn(0f, 1f) },
+                        color = cardBorder,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(50))
+                    )
+                } else {
+                    LinearProgressIndicator(
+                        color = cardBorder,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(50))
+                    )
+                }
+            }
+        }
+
+        when {
+            job.isActive -> IconButton(onClick = onCancel) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = "Cancel download",
+                    tint = cardBorder
+                )
+            }
+            job.status == DownloadStatus.FAILED || job.status == DownloadStatus.CANCELLED ->
+                IconButton(onClick = onRetry) {
+                    Icon(
+                        imageVector = Icons.Outlined.Refresh,
+                        contentDescription = "Retry download",
+                        tint = cardBorder
+                    )
+                }
+        }
+    }
+}
+
+private const val COLLAPSED_ROWS = 3
+
+/** "https://www.youtube.com/watch?v=abc" -> "youtube.com/watch?v=abc" */
+private fun displayUrl(url: String): String =
+    url.removePrefix("https://").removePrefix("http://").removePrefix("www.")
 
 /**
  * Dense search entry point for the list-mode browse view. Sits above the
