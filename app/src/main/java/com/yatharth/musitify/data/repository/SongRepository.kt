@@ -230,7 +230,18 @@ class SongRepository @Inject constructor(
         return songDao.getSongsByUrls(urls)
     }
 
-    suspend fun updateSong(song: Song) {
+    suspend fun updateSong(song: Song, record: Boolean = true) {
+        if (record) {
+            // Get the old song to get the old name
+            val oldSong = songDao.getSongById(song.id)
+            if (oldSong != null && oldSong.name != song.name) {
+                actionRepository.recordSongRenamed(
+                    song.uuid?.toString(),
+                    oldSong.name,
+                    song.name
+                )
+            }
+        }
         songDao.updateSong(song)
     }
 

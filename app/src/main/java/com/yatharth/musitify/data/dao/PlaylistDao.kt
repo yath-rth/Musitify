@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.entity.Song
@@ -85,4 +86,7 @@ interface PlaylistDao {
 
     @Query("UPDATE Playlist SET artPath = :artPath where id = :id" )
     suspend fun updateArt(id: Int, artPath: String)
+
+    @Update
+    suspend fun updatePlaylist(playlist: Playlist)
 }

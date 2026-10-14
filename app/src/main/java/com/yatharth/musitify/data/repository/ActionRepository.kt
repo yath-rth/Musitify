@@ -136,6 +136,32 @@ class ActionRepository @Inject constructor(
         )
     }
 
+    suspend fun recordSongRenamed(songUuid: String?, oldName: String, newName: String) {
+        if (songUuid == null) return
+        record(
+            type = ActionType.SONG_RENAMED,
+            songUuid = songUuid,
+            payloadJson =
+                buildJsonObject {
+                    put("old_name", oldName)
+                    put("new_name", newName)
+                }.toString()
+        )
+    }
+
+    suspend fun recordPlaylistRenamed(playlistUuid: String?, oldName: String, newName: String) {
+        if (playlistUuid == null) return
+        record(
+            type = ActionType.PLAYLIST_RENAMED,
+            playlistUuid = playlistUuid,
+            payloadJson =
+                buildJsonObject {
+                    put("old_name", oldName)
+                    put("new_name", newName)
+                }.toString()
+        )
+    }
+
     // ---- Outbox management (used by the sync loop) ----
 
     suspend fun getUnsyncedActions(): List<SyncAction> = syncActionDao.getUnsynced()

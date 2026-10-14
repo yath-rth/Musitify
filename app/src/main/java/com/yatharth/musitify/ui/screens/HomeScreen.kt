@@ -68,7 +68,9 @@ import com.yatharth.musitify.ui.elements.AddToPlaylistDialog
 import com.yatharth.musitify.ui.elements.CustomAlertBox
 import com.yatharth.musitify.ui.elements.CustomCircularButton
 import com.yatharth.musitify.ui.elements.PlaybackControls
+import com.yatharth.musitify.ui.elements.PlaylistContextMenuDialog
 import com.yatharth.musitify.ui.elements.PlaylistDialog
+import com.yatharth.musitify.ui.elements.RenamePlaylistDialog
 import com.yatharth.musitify.ui.elements.RenameSongDialog
 import com.yatharth.musitify.ui.elements.ShadowBox
 import com.yatharth.musitify.ui.elements.SongContextMenuDialog
@@ -123,7 +125,7 @@ fun HomeScreen(
     val showSongDeleteConfirm = remember { mutableStateOf(false) }
     val showPlaylistDeleteConfirm = remember { mutableStateOf(false) }
 
-    // New context menu states
+    // Song context menu states
     var songForContextMenu by remember { mutableStateOf<Song?>(null) }
     var showSongContextMenu by remember { mutableStateOf(false) }
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
@@ -132,6 +134,12 @@ fun HomeScreen(
     var selectedPlaylistForAddSong by remember { mutableStateOf<PlaylistInfo?>(null) }
     var isAddToExistingPlaylistMode by remember { mutableStateOf(false) }
     var newPlaylistNameForSong by remember { mutableStateOf("") }
+
+    // Playlist context menu states
+    var playlistForContextMenu by remember { mutableStateOf<Playlist?>(null) }
+    var showPlaylistContextMenu by remember { mutableStateOf(false) }
+    var showRenamePlaylistDialog by remember { mutableStateOf(false) }
+    var newPlaylistNameForRename by remember { mutableStateOf("") }
 
     val selectedPlaylist: PlaylistInfo? = remember(selectedPlaylistId) {
         playlists.firstOrNull { it.playlist.id == selectedPlaylistId }
@@ -175,30 +183,6 @@ fun HomeScreen(
                     createPlaylist = { showPlaylistDialog = true },
                     onStats = onOpenStats
                 )
-            }
-        },
-        floatingActionButton = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CustomCircularButton(
-                    modifier = Modifier.size(56.dp),
-                    onClick = { homeScreenViewModel.syncLibrary() },
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ArrowUpward,
-                        contentDescription = "Sync your library",
-                        modifier = Modifier.size(24.dp),
-                        tint = cardBorder
-                    )
-
-                    Icon(
-                        imageVector = Icons.Outlined.ArrowDownward,
-                        contentDescription = "Fetch library",
-                        modifier = Modifier.size(24.dp),
-                        tint = cardBorder
-                    )
-                }
             }
         }
     ) { innerPadding ->
@@ -256,9 +240,10 @@ fun HomeScreen(
                         currentPlayingIndex = selectedPlaylistId?.coerceAtLeast(0) ?: 0,
                         onPlaylistSelected = { index -> homeScreenViewModel.loadPlaylist(index) },
                         onLongClick = { playlist ->
-                            playlistToDelete = playlist
-                            showPlaylistDeleteConfirm.value = true
+                            playlistForContextMenu = playlist
+                            showPlaylistContextMenu = true
                         },
+                        onCreatePlaylist = { showPlaylistDialog = true },
                         modifier = Modifier
                             .fillMaxWidth()
                     )
@@ -598,6 +583,56 @@ fun HomeScreen(
                     showRenameSongDialog = false
                     newSongName = ""
                     songForContextMenu = null
+                }
+            )
+        }
+
+        // Playlist context menu dialog
+        if (showPlaylistContextMenu && playlistForContextMenu != null) {
+            PlaylistContextMenuDialog(
+                playlist = playlistForContextMenu!!,
+                onDismiss = {
+                    showPlaylistContextMenu = false
+                    playlistForContextMenu = null
+                },
+                onAddSongs = {
+                    showPlaylistContextMenu = false
+                    showPlaylistDialog = true
+                    isAddToExistingMode = true
+                    selectedPlaylistForDialog = playlists.firstOrNull { it.playlist.id == playlistForContextMenu!!.id }
+                },
+                onRename = {
+                    showPlaylistContextMenu = false
+                    newPlaylistNameForRename = playlistForContextMenu!!.name
+                    showRenamePlaylistDialog = true
+                },
+                onDelete = {
+                    showPlaylistContextMenu = false
+                    playlistToDelete = playlistForContextMenu
+                    showPlaylistDeleteConfirm.value = true
+                    playlistForContextMenu = null
+                }
+            )
+        }
+
+        // Rename playlist dialog
+        if (showRenamePlaylistDialog && playlistForContextMenu != null) {
+            RenamePlaylistDialog(
+                playlist = playlistForContextMenu!!,
+                newName = newPlaylistNameForRename,
+                onNameChange = { newPlaylistNameForRename = it },
+                onDismiss = {
+                    showRenamePlaylistDialog = false
+                    newPlaylistNameForRename = ""
+                    playlistForContextMenu = null
+                },
+                onConfirm = {
+                    if (newPlaylistNameForRename.isNotBlank() && newPlaylistNameForRename != playlistForContextMenu!!.name) {
+                        homeScreenViewModel.renamePlaylist(playlistForContextMenu!!, newPlaylistNameForRename)
+                    }
+                    showRenamePlaylistDialog = false
+                    newPlaylistNameForRename = ""
+                    playlistForContextMenu = null
                 }
             )
         }

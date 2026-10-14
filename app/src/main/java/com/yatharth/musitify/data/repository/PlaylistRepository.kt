@@ -227,6 +227,21 @@ class PlaylistRepository @Inject constructor(
         return playlistDao.getSongsForPlaylist(playlistId)
     }
 
+    suspend fun updatePlaylist(playlist: Playlist, record: Boolean = true) {
+        if (record) {
+            // Get the old playlist to get the old name
+            val oldPlaylist = playlistDao.getPlaylistById(playlist.id)
+            if (oldPlaylist != null && oldPlaylist.name != playlist.name) {
+                actionRepository.recordPlaylistRenamed(
+                    playlist.uuid?.toString(),
+                    oldPlaylist.name,
+                    playlist.name
+                )
+            }
+        }
+        playlistDao.updatePlaylist(playlist)
+    }
+
     suspend fun deletePlaylistById(
         id: Int,
         record: Boolean = true

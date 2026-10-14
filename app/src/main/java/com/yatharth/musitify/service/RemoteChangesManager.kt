@@ -36,6 +36,11 @@ class RemoteChangesManager @Inject constructor(
                         )
                     }
 
+                    ActionType.SONG_RENAMED -> {
+                        Log.d(TAG, "Song renamed from remote - not yet implemented")
+                        // TODO: Implement song rename from remote sync
+                    }
+
                     ActionType.PLAYLIST_CREATED -> {
                         playlistRepository.createPlaylistFromSync(
                             playlistUuid = action.playlistUuid,
@@ -48,6 +53,11 @@ class RemoteChangesManager @Inject constructor(
                             uuid = action.playlistUuid,
                             record = false
                         )
+                    }
+
+                    ActionType.PLAYLIST_RENAMED -> {
+                        Log.d(TAG, "Playlist renamed from remote - not yet implemented")
+                        // TODO: Implement playlist rename from remote sync
                     }
 
                     ActionType.SONG_ADDED_TO_PLAYLIST -> {
