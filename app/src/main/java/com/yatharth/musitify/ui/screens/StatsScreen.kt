@@ -88,6 +88,7 @@ fun StatsScreen(
                     onPause = { playbackControllerViewModel.pause() },
                     onNext = { playbackControllerViewModel.next() },
                     onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
+                    onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
                     addSong = {},
                     createPlaylist = {},
                     onStats = onClose

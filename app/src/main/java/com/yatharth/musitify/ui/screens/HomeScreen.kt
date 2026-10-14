@@ -156,6 +156,7 @@ fun HomeScreen(
                     onPause = { playbackControllerViewModel.pause() },
                     onNext = { playbackControllerViewModel.next() },
                     onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
+                    onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
                     addSong = { showAddDialog = true },
                     createPlaylist = { showPlaylistDialog = true },
                     onStats = onOpenStats

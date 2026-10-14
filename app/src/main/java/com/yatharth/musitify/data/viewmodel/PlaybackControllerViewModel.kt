@@ -33,6 +33,12 @@ class PlaybackControllerViewModel @Inject constructor(
         }
     }
 
+    fun toggleShuffleMode() {
+        controller.value?.let { player ->
+            player.shuffleModeEnabled = !player.shuffleModeEnabled
+        }
+    }
+
     fun pause() {
         if (controller.value?.isPlaying == true) controller.value?.pause()
         else controller.value?.play()

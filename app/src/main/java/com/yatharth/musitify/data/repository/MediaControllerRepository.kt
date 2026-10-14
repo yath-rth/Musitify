@@ -103,7 +103,7 @@ class MediaControllerRepository @Inject constructor(
             val mc = controllerFuture?.get() ?: return@addListener
             mc.repeatMode = Player.REPEAT_MODE_ALL
             _controller.value = mc
-            _uiState.update { it.copy(repeatMode = mc.repeatMode, isPlaying = mc.isPlaying) }
+            _uiState.update { it.copy(repeatMode = mc.repeatMode, shuffleMode = mc.shuffleModeEnabled, isPlaying = mc.isPlaying) }
             attachListener(mc)
         }, MoreExecutors.directExecutor())
     }
@@ -139,6 +139,10 @@ class MediaControllerRepository @Inject constructor(
 
             override fun onRepeatModeChanged(repeatMode: Int) {
                 _uiState.update { it.copy(repeatMode = repeatMode) }
+            }
+
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                _uiState.update { it.copy(shuffleMode = shuffleModeEnabled) }
             }
         })
     }
@@ -226,6 +230,7 @@ data class PlayerUiState(
     val currentSongId: Int? = null,
     val currentTitle: String? = null,
     val repeatMode: Int = 0,
+    val shuffleMode: Boolean = false,
     val positionMs: Long = 0,
     val durationMs: Long = 0
 )

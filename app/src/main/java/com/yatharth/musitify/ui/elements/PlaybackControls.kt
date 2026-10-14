@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.RepeatOne
+import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -39,6 +40,7 @@ fun PlaybackControls(
     addSong: () -> Unit,
     createPlaylist: () -> Unit,
     onRepeatToggle: () -> Unit,
+    onShuffleToggle: () -> Unit,
     onStats: () -> Unit = {}
 ) {
 
@@ -111,6 +113,16 @@ fun PlaybackControls(
                         imageVector = repeatIcon,
                         contentDescription = null,
                         tint = if (uiState.repeatMode == 0) cardBorder.copy(alpha = 0.5f) else cardBorder
+                    )
+                }
+
+                CustomCircularButton(
+                    onClick = onShuffleToggle,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Shuffle,
+                        contentDescription = null,
+                        tint = if (uiState.shuffleMode) cardBorder else cardBorder.copy(alpha = 0.5f)
                     )
                 }
 
