@@ -230,6 +230,10 @@ class SongRepository @Inject constructor(
         return songDao.getSongsByUrls(urls)
     }
 
+    suspend fun updateSong(song: Song) {
+        songDao.updateSong(song)
+    }
+
     suspend fun fetchAllAndUpdate() {
         val songs = songDao.getAllSongsWithoutLength()
         songs.forEachIndexed { index, song ->

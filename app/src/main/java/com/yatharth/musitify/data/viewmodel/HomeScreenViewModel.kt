@@ -173,6 +173,12 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
+    fun renameSong(song: Song, newName: String) {
+        viewModelScope.launch {
+            songRepository.updateSong(song.copy(name = newName))
+        }
+    }
+
     fun deletePlaylist(index: Int) {
         viewModelScope.launch {
             playlistRepository.deletePlaylistById(id = index)

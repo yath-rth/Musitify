@@ -64,11 +64,14 @@ import com.yatharth.musitify.service.DownloadJob
 import com.yatharth.musitify.service.DownloadStatus
 import com.yatharth.musitify.service.DownloadType
 import com.yatharth.musitify.ui.elements.AddSongDialog
+import com.yatharth.musitify.ui.elements.AddToPlaylistDialog
 import com.yatharth.musitify.ui.elements.CustomAlertBox
 import com.yatharth.musitify.ui.elements.CustomCircularButton
 import com.yatharth.musitify.ui.elements.PlaybackControls
 import com.yatharth.musitify.ui.elements.PlaylistDialog
+import com.yatharth.musitify.ui.elements.RenameSongDialog
 import com.yatharth.musitify.ui.elements.ShadowBox
+import com.yatharth.musitify.ui.elements.SongContextMenuDialog
 import com.yatharth.musitify.ui.elements.SortIcon
 import com.yatharth.musitify.ui.elements.display.MusicCarousel
 import com.yatharth.musitify.ui.elements.display.PlaylistCarousel
@@ -107,6 +110,7 @@ fun HomeScreen(
     var newPlaylistName by remember { mutableStateOf("") }
     val songFilterQuery by homeScreenViewModel.searchQuery.collectAsState()
     var selectedSongIds by remember { mutableStateOf(setOf<Song>()) }
+    var selectedPlaylistForDialog by remember { mutableStateOf<PlaylistInfo?>(null) }
 
     val playlists by homeScreenViewModel.sortedPlaylists.collectAsState()
     val playlistState by homeScreenViewModel.state.collectAsState()
@@ -119,7 +123,17 @@ fun HomeScreen(
     val showSongDeleteConfirm = remember { mutableStateOf(false) }
     val showPlaylistDeleteConfirm = remember { mutableStateOf(false) }
 
-    var selectedPlaylist: PlaylistInfo? = remember(selectedPlaylistId) {
+    // New context menu states
+    var songForContextMenu by remember { mutableStateOf<Song?>(null) }
+    var showSongContextMenu by remember { mutableStateOf(false) }
+    var showAddToPlaylistDialog by remember { mutableStateOf(false) }
+    var showRenameSongDialog by remember { mutableStateOf(false) }
+    var newSongName by remember { mutableStateOf("") }
+    var selectedPlaylistForAddSong by remember { mutableStateOf<PlaylistInfo?>(null) }
+    var isAddToExistingPlaylistMode by remember { mutableStateOf(false) }
+    var newPlaylistNameForSong by remember { mutableStateOf("") }
+
+    val selectedPlaylist: PlaylistInfo? = remember(selectedPlaylistId) {
         playlists.firstOrNull { it.playlist.id == selectedPlaylistId }
     }
 
@@ -264,8 +278,8 @@ fun HomeScreen(
                                 )
                             },
                             onLongSelect = { song ->
-                                songToDelete = song.id to song.name
-                                showSongDeleteConfirm.value = true
+                                songForContextMenu = song
+                                showSongContextMenu = true
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -325,8 +339,8 @@ fun HomeScreen(
                             )
                         },
                         onLongSelect = { song ->
-                            songToDelete = song.id to song.name
-                            showSongDeleteConfirm.value = true
+                            songForContextMenu = song
+                            showSongContextMenu = true
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -457,6 +471,7 @@ fun HomeScreen(
                     showPlaylistDialog = false
                     homeScreenViewModel.resetState()
                     selectedSongIds = emptySet()
+                    selectedPlaylistForDialog = null
                     newPlaylistName = ""
                 },
                 isAddToExistingMode = isAddToExistingMode,
@@ -469,8 +484,8 @@ fun HomeScreen(
                 songQuery = songFilterQuery,
                 onSongFilter = { homeScreenViewModel.onSearchQueryChange(it) },
                 playlists = playlists,
-                selectedPlaylist = selectedPlaylist,
-                onSelectPlaylist = { selectedPlaylist = it },
+                selectedPlaylist = selectedPlaylistForDialog,
+                onSelectPlaylist = { selectedPlaylistForDialog = it },
                 allSongs = filteredSongs,
                 selectedSongIds = selectedSongIds,
                 onToggleSong = { song ->
@@ -480,7 +495,7 @@ fun HomeScreen(
                 state = playlistState,
                 onSubmit = {
                     if (isAddToExistingMode) {
-                        selectedPlaylist?.let {
+                        selectedPlaylistForDialog?.let {
                             homeScreenViewModel.addSongsToPlaylist(
                                 it.playlist,
                                 selectedSongIds
@@ -492,6 +507,97 @@ fun HomeScreen(
                             selectedSongIds
                         )
                     }
+                }
+            )
+        }
+
+        // Song context menu dialog
+        if (showSongContextMenu && songForContextMenu != null) {
+            SongContextMenuDialog(
+                song = songForContextMenu!!,
+                onDismiss = {
+                    showSongContextMenu = false
+                    songForContextMenu = null
+                },
+                onAddToPlaylist = {
+                    showSongContextMenu = false
+                    showAddToPlaylistDialog = true
+                },
+                onRename = {
+                    showSongContextMenu = false
+                    newSongName = songForContextMenu!!.name
+                    showRenameSongDialog = true
+                },
+                onDelete = {
+                    showSongContextMenu = false
+                    songToDelete = songForContextMenu!!.id to songForContextMenu!!.name
+                    showSongDeleteConfirm.value = true
+                    songForContextMenu = null
+                }
+            )
+        }
+
+        // Add to playlist dialog
+        if (showAddToPlaylistDialog && songForContextMenu != null) {
+            AddToPlaylistDialog(
+                song = songForContextMenu!!,
+                onDismiss = {
+                    showAddToPlaylistDialog = false
+                    selectedPlaylistForAddSong = null
+                    newPlaylistNameForSong = ""
+                    songForContextMenu = null
+                    isAddToExistingPlaylistMode = false
+                    homeScreenViewModel.resetState()
+                },
+                isAddToExistingMode = isAddToExistingPlaylistMode,
+                onModeChange = {
+                    isAddToExistingPlaylistMode = it
+                    homeScreenViewModel.resetState()
+                },
+                newPlaylistName = newPlaylistNameForSong,
+                onNewPlaylistNameChange = { newPlaylistNameForSong = it },
+                playlists = playlists,
+                selectedPlaylist = selectedPlaylistForAddSong,
+                onSelectPlaylist = { selectedPlaylistForAddSong = it },
+                state = playlistState,
+                onSubmit = {
+                    if (isAddToExistingPlaylistMode) {
+                        selectedPlaylistForAddSong?.let {
+                            homeScreenViewModel.addSongsToPlaylist(
+                                it.playlist,
+                                setOf(songForContextMenu!!)
+                            )
+                        }
+                    } else {
+                        if (newPlaylistNameForSong.isNotBlank()) {
+                            homeScreenViewModel.createPlaylistWithSongs(
+                                newPlaylistNameForSong,
+                                setOf(songForContextMenu!!)
+                            )
+                        }
+                    }
+                }
+            )
+        }
+
+        // Rename song dialog
+        if (showRenameSongDialog && songForContextMenu != null) {
+            RenameSongDialog(
+                song = songForContextMenu!!,
+                newName = newSongName,
+                onNameChange = { newSongName = it },
+                onDismiss = {
+                    showRenameSongDialog = false
+                    newSongName = ""
+                    songForContextMenu = null
+                },
+                onConfirm = {
+                    if (newSongName.isNotBlank() && newSongName != songForContextMenu!!.name) {
+                        homeScreenViewModel.renameSong(songForContextMenu!!, newSongName)
+                    }
+                    showRenameSongDialog = false
+                    newSongName = ""
+                    songForContextMenu = null
                 }
             )
         }
