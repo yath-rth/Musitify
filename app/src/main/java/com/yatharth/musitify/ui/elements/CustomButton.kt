@@ -131,7 +131,7 @@ fun CustomCircularButton(
                     onLongPress = { onLongClick() }
                 )
             }
-            .padding(8.dp),
+            .padding(4.dp),
     ) {
         Box(
             modifier = Modifier

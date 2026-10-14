@@ -149,16 +149,16 @@ fun PlaybackControls(
                     )
                 }
 
-                CustomCircularButton(
-                    onClick = addSong,
-                    onLongClick = createPlaylist
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = null,
-                        tint = cardBorder
-                    )
-                }
+//                CustomCircularButton(
+//                    onClick = addSong,
+//                    onLongClick = createPlaylist
+//                ) {
+//                    Icon(
+//                        imageVector = Icons.Outlined.Add,
+//                        contentDescription = null,
+//                        tint = cardBorder
+//                    )
+//                }
             }
         }
     }
