@@ -73,6 +73,7 @@ import com.yatharth.musitify.ui.elements.PlaylistDialog
 import com.yatharth.musitify.ui.elements.RenamePlaylistDialog
 import com.yatharth.musitify.ui.elements.RenameSongDialog
 import com.yatharth.musitify.ui.elements.ShadowBox
+import com.yatharth.musitify.ui.elements.SleepTimerDialog
 import com.yatharth.musitify.ui.elements.SongContextMenuDialog
 import com.yatharth.musitify.ui.elements.SortIcon
 import com.yatharth.musitify.ui.elements.display.MusicCarousel
@@ -101,8 +102,10 @@ fun HomeScreen(
     val addState by addSongsViewModel.state.collectAsState()
     val downloadJobs by addSongsViewModel.jobs.collectAsState()
     val songSortMode by homeScreenViewModel.songSortMode.collectAsState()
+    val sleepTimerState by playbackControllerViewModel.sleepTimerState.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var showSleepTimerDialog by remember { mutableStateOf(false) }
     var url by remember { mutableStateOf("") }
     var isPlaylistMode by remember { mutableStateOf(false) }
     var isListMode by remember { mutableStateOf(false) }
@@ -181,7 +184,9 @@ fun HomeScreen(
                     onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
                     addSong = { showAddDialog = true },
                     createPlaylist = { showPlaylistDialog = true },
-                    onStats = onOpenStats
+                    onStats = onOpenStats,
+                    onSleepTimer = { showSleepTimerDialog = true },
+                    sleepTimerActive = sleepTimerState.isActive
                 )
             }
         }
@@ -633,6 +638,22 @@ fun HomeScreen(
                     showRenamePlaylistDialog = false
                     newPlaylistNameForRename = ""
                     playlistForContextMenu = null
+                }
+            )
+        }
+
+        // Sleep timer dialog
+        if (showSleepTimerDialog) {
+            SleepTimerDialog(
+                sleepTimerState = sleepTimerState,
+                onSetTimer = { duration ->
+                    playbackControllerViewModel.startSleepTimer(duration)
+                },
+                onCancelTimer = {
+                    playbackControllerViewModel.cancelSleepTimer()
+                },
+                onDismiss = {
+                    showSleepTimerDialog = false
                 }
             )
         }

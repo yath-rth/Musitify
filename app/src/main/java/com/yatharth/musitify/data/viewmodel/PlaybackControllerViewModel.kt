@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.media3.common.Player
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.repository.MediaControllerRepository
+import com.yatharth.musitify.service.SleepTimerDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
@@ -17,6 +18,7 @@ class PlaybackControllerViewModel @Inject constructor(
 
     val controller = mediaControllerRepository.controller
     val uiState = mediaControllerRepository.uiState
+    val sleepTimerState = mediaControllerRepository.sleepTimerState
 
     fun playSongs(songs: List<Song>, startIndex: Int, playlistId: Int?) {
         mediaControllerRepository.startPlayback(songs, startIndex, playlistId)
@@ -50,6 +52,14 @@ class PlaybackControllerViewModel @Inject constructor(
 
     fun previous() {
         controller.value?.seekToPrevious()
+    }
+
+    fun startSleepTimer(duration: SleepTimerDuration) {
+        mediaControllerRepository.startSleepTimer(duration)
+    }
+
+    fun cancelSleepTimer() {
+        mediaControllerRepository.cancelSleepTimer()
     }
 
 }

@@ -18,6 +18,7 @@ import com.yatharth.musitify.data.dao.SongDao
 import com.yatharth.musitify.data.entity.ListeningSession
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.music.MusicPlayerManager
+import com.yatharth.musitify.service.SleepTimerManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +44,8 @@ class MediaControllerRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val songDao: SongDao,
     private val playlistDao: PlaylistDao,
-    private val listeningSessionDao: ListeningSessionDao
+    private val listeningSessionDao: ListeningSessionDao,
+    private val sleepTimerManager: SleepTimerManager
 ) {
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var positionPollingJob: Job? = null
@@ -62,6 +64,8 @@ class MediaControllerRepository @Inject constructor(
     private var activePlaylistId: Int? = null
     private var activePlaylistName: String? = null
     private val songDetailsById = mutableMapOf<Int, Song>()
+
+    val sleepTimerState = sleepTimerManager.state
 
     /**
      * Builds the queue and starts playback. Also snapshots the songs and the
@@ -105,7 +109,24 @@ class MediaControllerRepository @Inject constructor(
             _controller.value = mc
             _uiState.update { it.copy(repeatMode = mc.repeatMode, shuffleMode = mc.shuffleModeEnabled, isPlaying = mc.isPlaying) }
             attachListener(mc)
+            setupSleepTimer(mc)
         }, MoreExecutors.directExecutor())
+    }
+
+    private fun setupSleepTimer(mc: MediaController) {
+        // Sleep timer is set up, and when it completes, pause the player
+        // The timer callback is set in startSleepTimer() method
+    }
+
+    fun startSleepTimer(duration: com.yatharth.musitify.service.SleepTimerDuration) {
+        sleepTimerManager.startTimer(duration) {
+            // When timer completes, pause playback
+            controller.value?.pause()
+        }
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerManager.cancelTimer()
     }
 
     private fun attachListener(mc: MediaController) {
