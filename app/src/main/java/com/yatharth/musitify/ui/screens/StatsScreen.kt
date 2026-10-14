@@ -65,7 +65,7 @@ fun StatsScreen(
 ) {
     val uiState by playbackControllerViewModel.uiState.collectAsState()
     val stats by statsViewModel.stats.collectAsState()
-    val songCount by statsViewModel.songCount.collectAsState()
+    val sleepTimerState by playbackControllerViewModel.sleepTimerState.collectAsState()
 
     LaunchedEffect(Unit) { statsViewModel.refresh() }
 
@@ -91,7 +91,9 @@ fun StatsScreen(
                     onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
                     addSong = {},
                     createPlaylist = {},
-                    onStats = onClose
+                    onStats = onClose,
+                    onSleepTimer = {},
+                    sleepTimerActive = sleepTimerState.isActive
                 )
             }
         }
@@ -117,8 +119,8 @@ fun StatsScreen(
             if (!stats.hasAnyListenTime) {
                 item { EmptyStatsCard() }
             } else {
-                item { HeroTotalCountCard(songCount) }
                 item { HeroTotalsCard(stats) }
+                item { InsightsCardsRow(stats) }
                 item { PeriodCardsRow(stats) }
                 if (stats.dailySeries.any { it.totalMs > 0 }) {
                     item { ListeningChartCard(stats.dailySeries) }
@@ -147,18 +149,18 @@ fun StatsScreen(
                         }
                     }
                 }
-//                item {
-//                    TopListCard(
-//                        title = "TOP ARTISTS",
-//                        subtitle = "artists you listen to the most",
-//                        emptyLabel = "No artist data yet",
-//                        hasData = stats.topArtists.isNotEmpty()
-//                    ) {
-//                        stats.topArtists.forEachIndexed { index, artist ->
-//                            ArtistStatRow(index, artist, stats.topArtists.firstOrNull()?.totalMs ?: 0)
-//                        }
-//                    }
-//                }
+                item {
+                    TopListCard(
+                        title = "TOP ARTISTS",
+                        subtitle = "artists you listen to the most",
+                        emptyLabel = "No artist data yet",
+                        hasData = stats.topArtists.isNotEmpty()
+                    ) {
+                        stats.topArtists.forEachIndexed { index, artist ->
+                            ArtistStatRow(index, artist, stats.topArtists.firstOrNull()?.totalMs ?: 0)
+                        }
+                    }
+                }
                 item {
                     TopListCard(
                         title = "TOP PLAYLISTS",
@@ -225,46 +227,47 @@ private fun HeroTotalsCard(stats: StatsSnapshot) {
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = "${stats.listensThisMonth} listening sessions this month",
-                color = text.copy(alpha = 0.6f),
-                style = adaptiveTypography().bodySmall
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "${stats.totalSessions} sessions",
+                    color = text.copy(alpha = 0.6f),
+                    style = adaptiveTypography().bodySmall
+                )
+                Text(
+                    text = "avg ${Formatter.formatListenTime(stats.averageSessionMs)}/session",
+                    color = text.copy(alpha = 0.6f),
+                    style = adaptiveTypography().bodySmall
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun HeroTotalCountCard(count: Long) {
-    ShadowBox(
+private fun InsightsCardsRow(stats: StatsSnapshot) {
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        bgColor = itemsBg,
-        alignment = Alignment.TopStart
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "TOTAL NUMBER OF SONGS",
-                color = text,
-                style = adaptiveTypography().labelSmall,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.5.sp
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = count.toString(),
-                color = accentColor1,
-                style = adaptiveTypography().titleMedium,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-//            Spacer(Modifier.height(8.dp))
-//            Text(
-//                text = "${stats.listensThisMonth} listening sessions this month",
-//                color = text.copy(alpha = 0.6f),
-//                style = adaptiveTypography().bodySmall
-//            )
-        }
+        InsightCard(
+            modifier = Modifier.weight(1f),
+            label = "STREAK",
+            value = "${stats.currentStreak}",
+            sub = "current · ${stats.longestStreak} longest",
+            color = accentColor1,
+            icon = "🔥"
+        )
+        InsightCard(
+            modifier = Modifier.weight(1f),
+            label = "COMPLETION",
+            value = "${stats.completionRate.toInt()}%",
+            sub = "songs finished",
+            color = accentColor2,
+            icon = "✓"
+        )
     }
 }
 
@@ -285,16 +288,66 @@ private fun PeriodCardsRow(stats: StatsSnapshot) {
             modifier = Modifier.weight(1f),
             label = "THIS WEEK",
             value = Formatter.formatListenTime(stats.thisWeekListenMs),
-            sub = null,
+            sub = "avg ${Formatter.formatListenTime(stats.thisWeekListenMs / 7)}/day",
             color = accentColor2
         )
         PeriodCard(
             modifier = Modifier.weight(1f),
             label = "THIS MONTH",
             value = Formatter.formatListenTime(stats.thisMonthListenMs),
-            sub = null,
+            sub = "${stats.listensThisMonth} sessions",
             color = accentColor3
         )
+    }
+}
+
+@Composable
+private fun InsightCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+    sub: String,
+    color: Color,
+    icon: String
+) {
+    ShadowBox(
+        modifier = modifier,
+        alignment = Alignment.CenterStart
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = label,
+                    color = text.copy(alpha = 0.7f),
+                    style = adaptiveTypography().labelSmall,
+                    fontWeight = FontWeight.ExtraLight,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = icon,
+                    style = adaptiveTypography().bodyMedium
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = value,
+                color = color,
+                style = adaptiveTypography().headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = sub,
+                color = text.copy(alpha = 0.5f),
+                style = adaptiveTypography().labelSmall
+            )
+        }
     }
 }
 

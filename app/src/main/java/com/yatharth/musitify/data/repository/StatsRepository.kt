@@ -103,6 +103,13 @@ data class StatsSnapshot(
     val thisMonthListenMs: Long = 0,
     val listensToday: Int = 0,
     val listensThisMonth: Int = 0,
+    val totalSessions: Int = 0,
+    val averageSessionMs: Long = 0,
+    val mostActiveDay: DailyStat? = null,
+    val currentStreak: Int = 0,
+    val longestStreak: Int = 0,
+    val averageDailyListenMs: Long = 0,
+    val completionRate: Double = 0.0,
     val dailySeries: List<DailyStat> = emptyList(),
     val topSongsAllTime: List<SongStat> = emptyList(),
     val topSongsThisMonth: List<SongStat> = emptyList(),
@@ -174,6 +181,26 @@ object StatsComputer {
             DailyStat(dayStart, dailyMap[dayStart] ?: 0L)
         }
 
+        // Calculate streaks
+        val (currentStreak, longestStreak) = calculateStreaks(dailyMap, todayStart)
+
+        // Calculate average session length (only from song sessions)
+        val songSessions = sessions.filter { it.songId != null }
+        val totalSessions = songSessions.size
+        val averageSessionMs = if (totalSessions > 0) total / totalSessions else 0L
+
+        // Calculate most active day
+        val mostActiveDay = dailyMap.maxByOrNull { it.value }?.let {
+            DailyStat(it.key, it.value)
+        }
+
+        // Calculate average daily listening (from all days with data)
+        val daysWithListens = dailyMap.filter { it.value > 0 }.size
+        val averageDailyListenMs = if (daysWithListens > 0) total / daysWithListens else 0L
+
+        // Calculate completion rate (songs fully played vs partially)
+        val completionRate = calculateCompletionRate(songSessions)
+
         val topSongsAllTime = songAgg.mapNotNull { (id, list) ->
             toSongStat(id, list)
         }.sortedByDescending { it.fullPlays }.take(10)
@@ -207,12 +234,61 @@ object StatsComputer {
             thisMonthListenMs = month,
             listensToday = todayCount,
             listensThisMonth = monthCount,
+            totalSessions = totalSessions,
+            averageSessionMs = averageSessionMs,
+            mostActiveDay = mostActiveDay,
+            currentStreak = currentStreak,
+            longestStreak = longestStreak,
+            averageDailyListenMs = averageDailyListenMs,
+            completionRate = completionRate,
             dailySeries = dailySeries,
             topSongsAllTime = topSongsAllTime,
             topSongsThisMonth = topSongsThisMonth,
             topArtists = topArtists,
             topPlaylists = topPlaylists
         )
+    }
+
+    private fun calculateStreaks(dailyMap: Map<Long, Long>, todayStart: Long): Pair<Int, Int> {
+        if (dailyMap.isEmpty()) return 0 to 0
+
+        var currentStreak = 0
+        var longestStreak = 0
+        var tempStreak = 0
+        var checkDay = todayStart
+
+        // Calculate current streak (going backwards from today)
+        while (dailyMap.getOrDefault(checkDay, 0L) > 0) {
+            currentStreak++
+            checkDay -= DAY_MS
+        }
+
+        // Calculate longest streak
+        val sortedDays = dailyMap.keys.sorted()
+        for (day in sortedDays) {
+            if (dailyMap.getOrDefault(day, 0L) > 0) {
+                tempStreak++
+                longestStreak = maxOf(longestStreak, tempStreak)
+            } else {
+                tempStreak = 0
+            }
+        }
+
+        return currentStreak to longestStreak
+    }
+
+    private fun calculateCompletionRate(sessions: List<ListeningSession>): Double {
+        if (sessions.isEmpty()) return 0.0
+
+        val validSessions = sessions.filter { it.songLength > 0 }
+        if (validSessions.isEmpty()) return 0.0
+
+        val completedSessions = validSessions.count { session ->
+            // Consider a song "completed" if listened to at least 80% of its length
+            session.durationMs >= (session.songLength * 0.8)
+        }
+
+        return (completedSessions.toDouble() / validSessions.size) * 100
     }
 
     private fun toSongStat(songId: Int?, sessions: List<ListeningSession>): SongStat? {
