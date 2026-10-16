@@ -74,6 +74,15 @@ class RemoteChangesManager @Inject constructor(
                             playlistUuid = action.playlistUuid
                         )
                     }
+
+                    ActionType.PLAYLIST_SONG_REORDERED -> {
+                        Log.d(TAG, "Reordering playlist song from remote")
+                        playlistRepository.reorderSongInPlaylistSync(
+                            songUuid = action.songUuid,
+                            playlistUuid = action.playlistUuid,
+                            payload = action.payload
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 Log.d(TAG, e.message.toString())

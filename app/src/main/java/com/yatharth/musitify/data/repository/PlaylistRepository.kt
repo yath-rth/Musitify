@@ -316,4 +316,69 @@ class PlaylistRepository @Inject constructor(
 
         songToPlaylistDao.removeSong(songToPlaylist)
     }
+
+    suspend fun reorderSongsInPlaylist(
+        playlistId: Int,
+        fromIndex: Int,
+        toIndex: Int,
+        record: Boolean = true
+    ) = withContext(Dispatchers.IO) {
+        val songsInPlaylist = songToPlaylistDao.getSongsInPlaylist(playlistId)
+
+        if (fromIndex < 0 || fromIndex >= songsInPlaylist.size ||
+            toIndex < 0 || toIndex >= songsInPlaylist.size) {
+            return@withContext
+        }
+
+        // Get the playlist for UUID
+        val playlist = playlistDao.getPlaylistById(playlistId)
+        val movedSong = songsInPlaylist[fromIndex]
+        val song = songDao.getSongById(movedSong.songId)
+
+        // Create a mutable list and reorder
+        val reorderedList = songsInPlaylist.toMutableList()
+        val movedItem = reorderedList.removeAt(fromIndex)
+        reorderedList.add(toIndex, movedItem)
+
+        // Update positions in database
+        reorderedList.forEachIndexed { index, songToPlaylist ->
+            songToPlaylistDao.updatePosition(
+                songId = songToPlaylist.songId,
+                playlistId = playlistId,
+                newPosition = index
+            )
+        }
+
+        // Record the action for sync
+        if (record && playlist != null && song != null) {
+            actionRepository.recordPlaylistSongReordered(
+                playlistUuid = playlist.uuid.toString(),
+                songUuid = song.uuid.toString(),
+                fromPosition = fromIndex,
+                toPosition = toIndex
+            )
+        }
+    }
+
+    suspend fun reorderSongInPlaylistSync(
+        songUuid: String?,
+        playlistUuid: String?,
+        payload: String?
+    ) = withContext(Dispatchers.IO) {
+        if (songUuid == null || playlistUuid == null || payload == null) {
+            throw IOException("Invalid parameters for reordering")
+        }
+
+        val song = songDao.getSongByUuid(songUuid)
+            ?: throw IOException("Song doesn't exist: $songUuid")
+        val playlist = playlistDao.getPlaylistByUuid(playlistUuid)
+            ?: throw IOException("Playlist doesn't exist: $playlistUuid")
+
+        val jsonObject = Json.parseToJsonElement(payload).jsonObject
+        val fromPosition = jsonObject["from_position"]?.jsonPrimitive?.content?.toInt() ?: 0
+        val toPosition = jsonObject["to_position"]?.jsonPrimitive?.content?.toInt() ?: 0
+
+        // Apply the reorder without recording it again (to avoid sync loop)
+        reorderSongsInPlaylist(playlist.id, fromPosition, toPosition, record = false)
+    }
 }

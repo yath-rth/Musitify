@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Reorder
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material3.Icon
@@ -72,12 +73,14 @@ import com.yatharth.musitify.ui.elements.PlaylistContextMenuDialog
 import com.yatharth.musitify.ui.elements.PlaylistDialog
 import com.yatharth.musitify.ui.elements.RenamePlaylistDialog
 import com.yatharth.musitify.ui.elements.RenameSongDialog
+import com.yatharth.musitify.ui.elements.ReorderableSongList
 import com.yatharth.musitify.ui.elements.ShadowBox
 import com.yatharth.musitify.ui.elements.SleepTimerDialog
 import com.yatharth.musitify.ui.elements.SongContextMenuDialog
 import com.yatharth.musitify.ui.elements.SortIcon
 import com.yatharth.musitify.ui.elements.display.MusicCarousel
 import com.yatharth.musitify.ui.elements.display.PlaylistCarousel
+import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.background
 import com.yatharth.musitify.ui.theme.cardBorder
@@ -109,6 +112,7 @@ fun HomeScreen(
     var url by remember { mutableStateOf("") }
     var isPlaylistMode by remember { mutableStateOf(false) }
     var isListMode by remember { mutableStateOf(false) }
+    var isReorderMode by remember { mutableStateOf(false) }
 
     var showPlaylistDialog by remember { mutableStateOf(false) }
     var isAddToExistingMode by remember { mutableStateOf(false) }
@@ -236,6 +240,15 @@ fun HomeScreen(
                                 homeScreenViewModel.onPlaylistSortModeToggle()
                             }
                         )
+                    } else {
+                        // Show reorder button when a playlist is selected
+                        IconButton(onClick = { isReorderMode = !isReorderMode }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Reorder,
+                                contentDescription = if (isReorderMode) "Exit reorder mode" else "Reorder songs",
+                                tint = if (isReorderMode) accentColor2 else cardBorder
+                            )
+                        }
                     }
                 }
 
@@ -255,7 +268,7 @@ fun HomeScreen(
                 }
 
                 selectedPlaylistId?.let { playlistId ->
-                    AnimatedVisibility(visible = songsInPlaylist.isNotEmpty()) {
+                    AnimatedVisibility(visible = songsInPlaylist.isNotEmpty() && !isReorderMode) {
                         MusicCarousel(
                             songs = songsInPlaylist,
                             currentPlayingIndex = songsInPlaylist.indexOfFirst { it.name == uiState.currentTitle }
@@ -274,6 +287,38 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                         )
+                    }
+
+                    AnimatedVisibility(visible = songsInPlaylist.isNotEmpty() && isReorderMode) {
+                        Column {
+                            Text(
+                                text = "LONG PRESS AND DRAG TO REORDER",
+                                color = accentColor2,
+                                style = adaptiveTypography().labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            ReorderableSongList(
+                                songs = songsInPlaylist,
+                                currentPlayingIndex = songsInPlaylist.indexOfFirst { it.name == uiState.currentTitle }
+                                    .coerceAtLeast(0),
+                                onTrackSelected = { index ->
+                                    playbackControllerViewModel.playSongs(
+                                        songsInPlaylist,
+                                        index,
+                                        playlistId
+                                    )
+                                },
+                                onReorder = { fromIndex, toIndex ->
+                                    homeScreenViewModel.reorderSongsInPlaylist(fromIndex, toIndex)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp)
+                            )
+                        }
                     }
                 }
 

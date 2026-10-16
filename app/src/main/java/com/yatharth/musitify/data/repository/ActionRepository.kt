@@ -162,6 +162,24 @@ class ActionRepository @Inject constructor(
         )
     }
 
+    suspend fun recordPlaylistSongReordered(
+        playlistUuid: String,
+        songUuid: String,
+        fromPosition: Int,
+        toPosition: Int
+    ) {
+        record(
+            type = ActionType.PLAYLIST_SONG_REORDERED,
+            songUuid = songUuid,
+            playlistUuid = playlistUuid,
+            payloadJson =
+                buildJsonObject {
+                    put("from_position", fromPosition)
+                    put("to_position", toPosition)
+                }.toString()
+        )
+    }
+
     // ---- Outbox management (used by the sync loop) ----
 
     suspend fun getUnsyncedActions(): List<SyncAction> = syncActionDao.getUnsynced()

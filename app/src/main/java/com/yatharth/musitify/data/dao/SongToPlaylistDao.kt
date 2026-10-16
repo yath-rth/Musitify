@@ -40,4 +40,10 @@ WHERE playListId = :playlistId
         songUuid: String,
         playlistUuid: String
     ): SongToPlaylist?
+
+    @Query("UPDATE SongToPlaylist SET position = :newPosition WHERE songId = :songId AND playListId = :playlistId")
+    suspend fun updatePosition(songId: Int, playlistId: Int, newPosition: Int)
+
+    @Query("SELECT * FROM SongToPlaylist WHERE playListId = :playlistId ORDER BY position")
+    suspend fun getSongsInPlaylist(playlistId: Int): List<SongToPlaylist>
 }

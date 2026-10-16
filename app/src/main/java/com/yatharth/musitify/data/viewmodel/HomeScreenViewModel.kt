@@ -205,6 +205,13 @@ class HomeScreenViewModel @Inject constructor(
             actionController.pullActions()
         }
     }
+
+    fun reorderSongsInPlaylist(fromIndex: Int, toIndex: Int) {
+        val playlistId = _playlistId.value ?: return
+        viewModelScope.launch {
+            playlistRepository.reorderSongsInPlaylist(playlistId, fromIndex, toIndex)
+        }
+    }
 }
 
 sealed interface PlaylistDialogUiState {
