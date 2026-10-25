@@ -167,6 +167,7 @@ compose.desktop {
                 upgradeUuid = "6f1d1c3e-2b8a-4c55-9a3e-6b0f8a1d7c42"
                 shortcut = true
                 dirChooser = true
+                iconFile.set(project.file("src/main/resources/icons/musitify.ico"))
             }
         }
     }
