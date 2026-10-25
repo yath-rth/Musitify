@@ -2,6 +2,7 @@ package com.yatharth.musitify.engine
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -101,12 +102,10 @@ class DownloadQueue(
     fun enqueuePlaylist(url: String): Boolean = enqueue(url, DownloadType.PLAYLIST)
 
     fun cancel(id: Long) {
-        val task = running[id]
-        if (task != null) {
-            task.cancel() // status flips to CANCELLED in the catch block; subprocess killed
-        } else {
-            update(id) { if (it.status == DownloadStatus.QUEUED) it.copy(status = DownloadStatus.CANCELLED) else it }
-        }
+        // QUEUED → CANCELLED directly (worker skips it); RUNNING → cancel the task, whose catch
+        // block flips it to CANCELLED after killing the subprocess.
+        update(id) { if (it.status == DownloadStatus.QUEUED) it.copy(status = DownloadStatus.CANCELLED) else it }
+        running[id]?.cancel()
     }
 
     fun retry(id: Long) {
@@ -149,9 +148,8 @@ class DownloadQueue(
         val job = _jobs.value.firstOrNull { it.id == id } ?: return
         if (job.status != DownloadStatus.QUEUED) return // cancelled while waiting
 
-        update(id) { it.copy(status = DownloadStatus.RUNNING) }
-
-        val task = scope.launch {
+        // Register the task before flipping to RUNNING so cancel() can never miss it.
+        val task = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 beforeJob?.let { runCatching { it() }.onFailure { e -> if (e is CancellationException) throw e } }
                 when (job.type) {
@@ -176,7 +174,22 @@ class DownloadQueue(
             }
         }
         running[id] = task
-        task.join()
+        var startIt = false
+        _jobs.update { list ->
+            startIt = false
+            list.map {
+                if (it.id == id && it.status == DownloadStatus.QUEUED) {
+                    startIt = true
+                    it.copy(status = DownloadStatus.RUNNING)
+                } else it
+            }
+        }
+        if (startIt) {
+            task.start()
+            task.join()
+        } else {
+            task.cancel() // cancelled between the check above and now
+        }
         running.remove(id)
     }
 
