@@ -57,7 +57,6 @@ fun PlaylistCarousel(
     currentPlayingIndex: Int,
     onPlaylistSelected: (Int) -> Unit,
     onLongClick: (Playlist) -> Unit,
-    onCreatePlaylist: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -125,45 +124,6 @@ fun PlaylistCarousel(
                 PlaylistArt(playlistInfo, modifier = Modifier.fillMaxSize())
             }
         }
-
-        // Add playlist card
-        item(key = "add_playlist") {
-            val index = playlists.size
-            val layoutInfo = listState.layoutInfo
-            val itemInfo = layoutInfo.visibleItemsInfo.find { it.index == index }
-
-            val rawDistance = if (itemInfo == null) 1f else {
-                val center = layoutInfo.viewportEndOffset / 2f
-                val itemCenter = itemInfo.offset + itemInfo.size / 2f
-                ((itemCenter - center) / (layoutInfo.viewportEndOffset / 2f)).coerceIn(-1f, 1f)
-            }
-
-            val distanceFromCenter = if (abs(rawDistance) < 0.5f) 0f else rawDistance
-
-            val scale = lerp(1f, 0.75f, abs(distanceFromCenter))
-            val rotationY = lerp(0f, 25f, distanceFromCenter)
-            val alpha = lerp(1f, 0.75f, abs(distanceFromCenter))
-
-            Box(
-                modifier = Modifier
-                    .width(itemWidth)
-                    .height(itemWidth + 64.dp)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        this.rotationY = rotationY
-                        this.alpha = alpha
-                        cameraDistance = 12f * density
-                    }
-                    .combinedClickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onCreatePlaylist
-                    )
-            ) {
-                AddPlaylistCard(modifier = Modifier.fillMaxSize())
-            }
-        }
     }
 }
 
@@ -214,45 +174,6 @@ fun PlaylistArt(
                 letterSpacing = 0.5.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-fun AddPlaylistCard(
-    modifier: Modifier
-) {
-    ShadowBox(
-        modifier = modifier,
-        shadowOffsetX = 0.dp,
-        shadowOffsetY = 0.dp,
-        borderThickness = 6.dp,
-        rounding = 5,
-        bgColor = accentColor2.copy(alpha = 0.1f)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Add,
-                contentDescription = "Create playlist",
-                modifier = Modifier.size(64.dp),
-                tint = accentColor2
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "CREATE PLAYLIST",
-                color = accentColor2,
-                style = adaptiveTypography().labelLarge,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.5.sp
             )
         }
     }

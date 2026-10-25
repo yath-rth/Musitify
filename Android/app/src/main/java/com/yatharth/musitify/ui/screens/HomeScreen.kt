@@ -6,6 +6,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.outlined.Download
+import com.yatharth.musitify.ui.theme.itemsBg
+import androidx.compose.material.icons.outlined.Shuffle
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import kotlinx.coroutines.channels.Channel
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
@@ -197,8 +202,9 @@ fun HomeScreen(
     }
 
     BackHandler(
-        enabled = songsInPlaylist.isNotEmpty()
+        enabled = selectedPlaylistId != null
     ) {
+        isReorderMode = false
         homeScreenViewModel.clearSelectedPlaylist()
     }
 
@@ -281,117 +287,148 @@ fun HomeScreen(
                 }
             }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = selectedPlaylist?.playlist?.name?.uppercase() ?: "PLAYLISTS",
-                        color = text,
-                        style = adaptiveTypography().labelLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 2.sp,
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-
-                    if (selectedPlaylist == null) {
+            if (selectedPlaylist == null) {
+                item(key = "playlists_header") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "PLAYLISTS",
+                            color = text,
+                            style = adaptiveTypography().labelLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
                         SortIcon(
                             mode = playlistSortMode,
-                            onClick = {
-                                homeScreenViewModel.onPlaylistSortModeToggle()
-                            }
+                            onClick = { homeScreenViewModel.onPlaylistSortModeToggle() }
                         )
-                    } else {
-                        // Show reorder button when a playlist is selected
-                        IconButton(onClick = { isReorderMode = !isReorderMode }) {
+                        // Creating a playlist is an action, not a playlist, so it
+                        // lives here instead of as a full-size card in the carousel.
+                        CustomButton(onClick = {
+                            isAddToExistingMode = false
+                            showPlaylistDialog = true
+                        }) {
                             Icon(
-                                imageVector = Icons.Outlined.Reorder,
-                                contentDescription = if (isReorderMode) "Exit reorder mode" else "Reorder songs",
-                                tint = if (isReorderMode) accentColor2 else cardBorder
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = "New playlist",
+                                tint = cardBorder,
+                                modifier = Modifier.padding(6.dp)
                             )
                         }
                     }
                 }
-
-                AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
-                    PlaylistCarousel(
-                        playlists = playlists,
-                        // A position in the list, not the playlist's database id.
-                        currentPlayingIndex = playlists.indexOfFirst { it.playlist.id == selectedPlaylistId }
-                            .coerceAtLeast(0),
-                        onPlaylistSelected = { index -> homeScreenViewModel.loadPlaylist(index) },
-                        onLongClick = { playlist ->
-                            playlistForContextMenu = playlist
-                            showPlaylistContextMenu = true
+                item(key = "playlists_carousel") {
+                    Column {
+                        if (playlists.isEmpty()) {
+                            EmptyHint(
+                                title = "No playlists yet",
+                                body = "Group songs you like to play together.",
+                                action = "NEW PLAYLIST",
+                                onAction = {
+                                    isAddToExistingMode = false
+                                    showPlaylistDialog = true
+                                }
+                            )
+                        } else {
+                            PlaylistCarousel(
+                                playlists = playlists,
+                                currentPlayingIndex = 0,
+                                onPlaylistSelected = { id -> homeScreenViewModel.loadPlaylist(id) },
+                                onLongClick = { playlist ->
+                                    playlistForContextMenu = playlist
+                                    showPlaylistContextMenu = true
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            } else {
+                val playlistId = selectedPlaylist.playlist.id
+                item(key = "playlist_header") {
+                    PlaylistHeader(
+                        info = selectedPlaylist,
+                        isReorderMode = isReorderMode,
+                        canPlay = songsInPlaylist.isNotEmpty(),
+                        onBack = {
+                            isReorderMode = false
+                            homeScreenViewModel.clearSelectedPlaylist()
                         },
-                        onCreatePlaylist = { showPlaylistDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
+                        onToggleReorder = { isReorderMode = !isReorderMode },
+                        onPlay = {
+                            playbackControllerViewModel.playSongs(songsInPlaylist, 0, playlistId)
+                        },
+                        onShuffle = {
+                            playbackControllerViewModel.playShuffled(songsInPlaylist, playlistId)
+                        }
                     )
                 }
-
-                selectedPlaylistId?.let { playlistId ->
-                    AnimatedVisibility(visible = songsInPlaylist.isNotEmpty() && !isReorderMode) {
-                        MusicCarousel(
-                            songs = songsInPlaylist,
-                            currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id }
-                                .coerceAtLeast(0),
-                            onTrackSelected = { index ->
-                                playbackControllerViewModel.playSongs(
-                                    songsInPlaylist,
-                                    index,
-                                    playlistId
-                                )
-                            },
-                            onLongSelect = { song ->
-                                songForContextMenu = song
-                                showSongContextMenu = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                        )
-                    }
-
-                    AnimatedVisibility(visible = songsInPlaylist.isNotEmpty() && isReorderMode) {
-                        Column {
-                            Text(
-                                text = "USE ARROWS TO REORDER SONGS",
-                                color = accentColor2,
-                                style = adaptiveTypography().labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                item(key = "playlist_songs") {
+                    Column {
+                        when {
+                            selectedPlaylist.numOfSongs == 0 -> EmptyHint(
+                                title = "This playlist is empty",
+                                body = "Add songs from your library.",
+                                action = "ADD SONGS",
+                                onAction = {
+                                    isAddToExistingMode = true
+                                    selectedPlaylistForDialog = selectedPlaylist
+                                    showPlaylistDialog = true
+                                }
                             )
-                            ReorderableSongList(
+
+                            isReorderMode -> {
+                                Text(
+                                    text = "USE ARROWS TO REORDER SONGS",
+                                    color = accentColor2,
+                                    style = adaptiveTypography().labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp,
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                ReorderableSongList(
+                                    songs = songsInPlaylist,
+                                    currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id }
+                                        .coerceAtLeast(0),
+                                    onTrackSelected = { index ->
+                                        playbackControllerViewModel.playSongs(songsInPlaylist, index, playlistId)
+                                    },
+                                    onReorder = { fromIndex, toIndex ->
+                                        homeScreenViewModel.reorderSongsInPlaylist(fromIndex, toIndex)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp)
+                                )
+                            }
+
+                            else -> MusicCarousel(
                                 songs = songsInPlaylist,
                                 currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id }
                                     .coerceAtLeast(0),
                                 onTrackSelected = { index ->
-                                    playbackControllerViewModel.playSongs(
-                                        songsInPlaylist,
-                                        index,
-                                        playlistId
-                                    )
+                                    playbackControllerViewModel.playSongs(songsInPlaylist, index, playlistId)
                                 },
-                                onReorder = { fromIndex, toIndex ->
-                                    homeScreenViewModel.reorderSongsInPlaylist(fromIndex, toIndex)
+                                onLongSelect = { song ->
+                                    songForContextMenu = song
+                                    showSongContextMenu = true
                                 },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp)
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            if (songsInPlaylist.isEmpty()) {
+            if (selectedPlaylist == null) {
                 item(key = "songs_header") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -845,13 +882,157 @@ private fun AppHeader(
                 )
             }
             CustomButton(onClick = onAddSongs, bgColor = primaryAction.copy(alpha = 0.2f)) {
+                // Download arrow, not "+", so it can't be confused with New playlist.
                 Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "Add songs",
+                    imageVector = Icons.Outlined.Download,
+                    contentDescription = "Add songs from a link",
                     tint = cardBorder,
                     modifier = Modifier.padding(8.dp)
                 )
             }
+        }
+    }
+}
+
+/**
+ * Top of an opened playlist: a way back, what it is, and the two things you
+ * most likely want to do with it.
+ */
+@Composable
+private fun PlaylistHeader(
+    info: PlaylistInfo,
+    isReorderMode: Boolean,
+    canPlay: Boolean,
+    onBack: () -> Unit,
+    onToggleReorder: () -> Unit,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CustomButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = "Back to library",
+                    tint = cardBorder,
+                    modifier = Modifier.padding(6.dp)
+                )
+            }
+            Text(
+                text = "PLAYLIST",
+                color = textSecondary,
+                style = adaptiveTypography().labelMedium,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+            )
+            if (canPlay) {
+                CustomButton(
+                    onClick = onToggleReorder,
+                    bgColor = if (isReorderMode) cardBorder else itemsBg
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Reorder,
+                        contentDescription = if (isReorderMode) "Done reordering" else "Reorder songs",
+                        tint = if (isReorderMode) itemsBg else cardBorder,
+                        modifier = Modifier.padding(6.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ShadowBox(modifier = Modifier.size(112.dp), rounding = 5) {
+                info.playlist.artPath?.let {
+                    AsyncImage(
+                        model = File(it),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(2.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = info.playlist.name,
+                    color = text,
+                    style = adaptiveTypography().titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${Formatter.count(info.numOfSongs, "song")} · " +
+                            Formatter.formatTimeToMinutes(info.playlistLength),
+                    color = textSecondary,
+                    style = adaptiveTypography().bodySmall
+                )
+                if (canPlay) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        LabeledButton("PLAY", Icons.Outlined.PlayArrow, filled = true, onClick = onPlay)
+                        LabeledButton("SHUFFLE", Icons.Outlined.Shuffle, filled = false, onClick = onShuffle)
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+/** Icon + text button in the outlined style; [filled] marks the main action. */
+@Composable
+private fun LabeledButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    filled: Boolean,
+    onClick: () -> Unit,
+) {
+    val tint = if (filled) itemsBg else cardBorder
+    CustomButton(onClick = onClick, bgColor = if (filled) cardBorder else itemsBg) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            Text(
+                text = label,
+                color = tint,
+                style = adaptiveTypography().labelMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
+}
+
+/** Empty state with one clear next step. */
+@Composable
+private fun EmptyHint(title: String, body: String, action: String, onAction: () -> Unit) {
+    ShadowBox(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+        alignment = Alignment.TopStart
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(text = title, color = text, style = adaptiveTypography().bodyLarge, fontWeight = FontWeight.ExtraBold)
+            Text(text = body, color = textSecondary, style = adaptiveTypography().bodySmall)
+            Spacer(Modifier.height(4.dp))
+            LabeledButton(action, Icons.Outlined.Add, filled = false, onClick = onAction)
         }
     }
 }

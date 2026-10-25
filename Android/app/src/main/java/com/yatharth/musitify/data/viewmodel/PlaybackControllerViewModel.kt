@@ -22,6 +22,13 @@ class PlaybackControllerViewModel @Inject constructor(
         mediaControllerRepository.startPlayback(songs, startIndex, playlistId)
     }
 
+    /** Starts the list at a random song with shuffle on. */
+    fun playShuffled(songs: List<Song>, playlistId: Int?) {
+        if (songs.isEmpty()) return
+        mediaControllerRepository.startPlayback(songs, songs.indices.random(), playlistId)
+        controller.value?.shuffleModeEnabled = true
+    }
+
     fun toggleRepeatMode() {
         controller.value?.let { player ->
             player.repeatMode = when (player.repeatMode) {
