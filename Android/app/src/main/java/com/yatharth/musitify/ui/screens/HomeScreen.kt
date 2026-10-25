@@ -85,6 +85,7 @@ import com.yatharth.musitify.data.viewmodel.AddSongsUiState
 import com.yatharth.musitify.data.viewmodel.AddSongsViewModel
 import com.yatharth.musitify.data.viewmodel.HomeScreenViewModel
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
+import com.yatharth.musitify.data.viewmodel.PlaylistDialogUiState
 import com.yatharth.musitify.service.DownloadJob
 import com.yatharth.musitify.service.DownloadStatus
 import com.yatharth.musitify.service.DownloadType
@@ -94,7 +95,8 @@ import com.yatharth.musitify.ui.elements.CustomAlertBox
 import com.yatharth.musitify.ui.elements.CustomCircularButton
 import com.yatharth.musitify.ui.elements.PlaybackControls
 import com.yatharth.musitify.ui.elements.PlaylistContextMenuDialog
-import com.yatharth.musitify.ui.elements.PlaylistDialog
+import com.yatharth.musitify.ui.elements.AddSongsToPlaylistDialog
+import com.yatharth.musitify.ui.elements.CreatePlaylistDialog
 import com.yatharth.musitify.ui.elements.RenamePlaylistDialog
 import com.yatharth.musitify.ui.elements.RenameSongDialog
 import com.yatharth.musitify.ui.elements.ReorderableSongList
@@ -585,49 +587,70 @@ fun HomeScreen(
         }
 
         if (showPlaylistDialog) {
-            PlaylistDialog(
-                onDismiss = {
-                    showPlaylistDialog = false
-                    homeScreenViewModel.resetState()
-                    selectedSongIds = emptySet()
-                    selectedPlaylistForDialog = null
-                    newPlaylistName = ""
-                },
-                isAddToExistingMode = isAddToExistingMode,
-                onModeChange = {
-                    isAddToExistingMode = it
-                    homeScreenViewModel.resetState()
-                },
-                newPlaylistName = newPlaylistName,
-                onNewPlaylistNameChange = { newPlaylistName = it },
-                songQuery = songFilterQuery,
-                onSongFilter = { homeScreenViewModel.onSearchQueryChange(it) },
-                playlists = playlists,
-                selectedPlaylist = selectedPlaylistForDialog,
-                onSelectPlaylist = { selectedPlaylistForDialog = it },
-                allSongs = filteredSongs,
-                selectedSongIds = selectedSongIds,
-                onToggleSong = { song ->
-                    selectedSongIds = if (selectedSongIds.contains(song))
-                        selectedSongIds - song else selectedSongIds + song
-                },
-                state = playlistState,
-                onSubmit = {
-                    if (isAddToExistingMode) {
-                        selectedPlaylistForDialog?.let {
-                            homeScreenViewModel.addSongsToPlaylist(
-                                it.playlist,
-                                selectedSongIds
-                            )
-                        }
-                    } else {
-                        homeScreenViewModel.createPlaylistWithSongs(
-                            newPlaylistName,
-                            selectedSongIds
-                        )
-                    }
+            // Its own search, so it doesn't share (and leave filtered) the library search box.
+            var pickerQuery by remember { mutableStateOf("") }
+            val pickerSongs = remember(allSongs, pickerQuery) {
+                allSongs.filter {
+                    pickerQuery.isBlank() ||
+                            it.name.contains(pickerQuery, ignoreCase = true) ||
+                            it.artist.contains(pickerQuery, ignoreCase = true)
                 }
-            )
+            }
+            val toggleSong: (Song) -> Unit = { song ->
+                selectedSongIds = if (song in selectedSongIds) selectedSongIds - song else selectedSongIds + song
+            }
+            val closePlaylistDialog: () -> Unit = {
+                showPlaylistDialog = false
+                homeScreenViewModel.resetState()
+                selectedSongIds = emptySet()
+                selectedPlaylistForDialog = null
+                newPlaylistName = ""
+            }
+            val target = selectedPlaylistForDialog
+
+            if (isAddToExistingMode && target != null) {
+                val targetSongs by remember(target.playlist.id) {
+                    homeScreenViewModel.songsIn(target.playlist.id)
+                }.collectAsState(initial = emptyList())
+                AddSongsToPlaylistDialog(
+                    playlistName = target.playlist.name,
+                    query = pickerQuery,
+                    onQueryChange = { pickerQuery = it },
+                    songs = pickerSongs,
+                    alreadyIn = targetSongs.map { it.id }.toSet(),
+                    selected = selectedSongIds,
+                    onToggleSong = toggleSong,
+                    state = playlistState,
+                    onSubmit = { homeScreenViewModel.addSongsToPlaylist(target.playlist, selectedSongIds) },
+                    onDismiss = closePlaylistDialog
+                )
+            } else {
+                CreatePlaylistDialog(
+                    name = newPlaylistName,
+                    onNameChange = { newPlaylistName = it },
+                    query = pickerQuery,
+                    onQueryChange = { pickerQuery = it },
+                    songs = pickerSongs,
+                    selected = selectedSongIds,
+                    onToggleSong = toggleSong,
+                    state = playlistState,
+                    onSubmit = { homeScreenViewModel.createPlaylistWithSongs(newPlaylistName.trim(), selectedSongIds) },
+                    onDismiss = closePlaylistDialog
+                )
+            }
+
+            // Close on success and say what happened, instead of a "SAVED"
+            // label that left you to press Cancel.
+            LaunchedEffect(playlistState) {
+                if (playlistState is PlaylistDialogUiState.Success) {
+                    announcements.trySend(
+                        if (isAddToExistingMode && target != null)
+                            "Added ${Formatter.count(selectedSongIds.size, "song")} to ${target.playlist.name}"
+                        else "Created ${newPlaylistName.trim()}"
+                    )
+                    closePlaylistDialog()
+                }
+            }
         }
 
         // Song context menu dialog
@@ -659,6 +682,21 @@ fun HomeScreen(
 
         // Add to playlist dialog
         if (showAddToPlaylistDialog && songForContextMenu != null) {
+            LaunchedEffect(playlistState) {
+                if (playlistState is PlaylistDialogUiState.Success) {
+                    announcements.trySend(
+                        if (isAddToExistingPlaylistMode)
+                            "Added to ${selectedPlaylistForAddSong?.playlist?.name ?: "playlist"}"
+                        else "Created ${newPlaylistNameForSong.trim()}"
+                    )
+                    showAddToPlaylistDialog = false
+                    selectedPlaylistForAddSong = null
+                    newPlaylistNameForSong = ""
+                    songForContextMenu = null
+                    isAddToExistingPlaylistMode = false
+                    homeScreenViewModel.resetState()
+                }
+            }
             AddToPlaylistDialog(
                 song = songForContextMenu!!,
                 onDismiss = {

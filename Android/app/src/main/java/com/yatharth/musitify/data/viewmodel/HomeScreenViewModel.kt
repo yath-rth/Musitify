@@ -65,6 +65,9 @@ class HomeScreenViewModel @Inject constructor(
         _playlistId.value = id
     }
 
+    /** Songs in any playlist, e.g. to mark which are already added. */
+    fun songsIn(playlistId: Int) = playlistRepository.songsInPlaylist(playlistId)
+
     fun clearSelectedPlaylist() {
         _playlistId.value = null
     }
