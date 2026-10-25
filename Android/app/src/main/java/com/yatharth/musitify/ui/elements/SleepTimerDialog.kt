@@ -30,6 +30,7 @@ import com.yatharth.musitify.ui.theme.text
 fun SleepTimerDialog(
     sleepTimerState: SleepTimerState,
     onSetTimer: (SleepTimerDuration) -> Unit,
+    onEndOfSong: () -> Unit,
     onCancelTimer: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -50,13 +51,18 @@ fun SleepTimerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (sleepTimerState.isActive) {
-                    // Show active timer info
+                if (sleepTimerState.isActive && sleepTimerState.endOfSong) {
                     Text(
-                        text = "Timer Active",
+                        text = "Music stops when this song ends.",
                         style = adaptiveTypography().bodyMedium,
                         color = text,
-                        fontWeight = FontWeight.Bold
+                        textAlign = TextAlign.Center
+                    )
+                } else if (sleepTimerState.isActive) {
+                    Text(
+                        text = "Music stops in",
+                        style = adaptiveTypography().bodyMedium,
+                        color = text
                     )
 
                     val remainingMinutes = (sleepTimerState.remainingMs / 60000).toInt()
@@ -64,10 +70,12 @@ fun SleepTimerDialog(
 
                     Text(
                         text = String.format("%02d:%02d", remainingMinutes, remainingSeconds),
-                        style = adaptiveTypography().headlineLarge,
-                        color = text,
-                        fontWeight = FontWeight.Bold
+                        style = adaptiveTypography().titleMedium,
+                        color = text
                     )
+                }
+
+                if (sleepTimerState.isActive) {
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -95,13 +103,31 @@ fun SleepTimerDialog(
                 } else {
                     // Show timer duration options
                     Text(
-                        text = "Set sleep timer duration",
+                        text = "Stop the music after",
                         style = adaptiveTypography().bodySmall,
                         color = text,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    // Most common choice, so it comes first and full width.
+                    CustomButton(
+                        onClick = {
+                            onEndOfSong()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "THIS SONG",
+                            style = adaptiveTypography().labelMedium,
+                            color = text,
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp)
+                        )
+                    }
 
                     // First row of durations
                     Row(

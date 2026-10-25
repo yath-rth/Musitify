@@ -814,6 +814,7 @@ fun HomeScreen(
                 onSetTimer = { duration ->
                     playbackControllerViewModel.startSleepTimer(duration)
                 },
+                onEndOfSong = { playbackControllerViewModel.startSleepAtEndOfSong() },
                 onCancelTimer = {
                     playbackControllerViewModel.cancelSleepTimer()
                 },

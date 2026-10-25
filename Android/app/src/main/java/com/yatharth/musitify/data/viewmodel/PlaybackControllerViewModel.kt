@@ -67,6 +67,10 @@ class PlaybackControllerViewModel @Inject constructor(
         mediaControllerRepository.startSleepTimer(duration)
     }
 
+    fun startSleepAtEndOfSong() {
+        mediaControllerRepository.startSleepAtEndOfSong()
+    }
+
     fun cancelSleepTimer() {
         mediaControllerRepository.cancelSleepTimer()
     }

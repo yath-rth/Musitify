@@ -125,6 +125,10 @@ class MediaControllerRepository @Inject constructor(
         }
     }
 
+    fun startSleepAtEndOfSong() {
+        sleepTimerManager.startEndOfSong()
+    }
+
     fun cancelSleepTimer() {
         sleepTimerManager.cancelTimer()
     }
@@ -144,6 +148,15 @@ class MediaControllerRepository @Inject constructor(
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                // "End of song" sleep timer: the song finished on its own (or
+                // looped), so stop here.
+                val songFinished = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
+                if (songFinished && sleepTimerManager.state.value.endOfSong) {
+                    mc.pause()
+                    sleepTimerManager.cancelTimer()
+                }
+
                 flushListenTime()
                 lastTrackedSongId =
                     mediaItem?.mediaMetadata?.extras?.getInt("songId")
@@ -156,6 +169,13 @@ class MediaControllerRepository @Inject constructor(
                         currentTitle = mediaItem?.mediaMetadata?.title?.toString(),
                         positionMs = 0
                     )
+                }
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                // Last song ended with repeat off: playback already stopped.
+                if (playbackState == Player.STATE_ENDED && sleepTimerManager.state.value.endOfSong) {
+                    sleepTimerManager.cancelTimer()
                 }
             }
 

@@ -290,9 +290,11 @@ fun NowPlayingScreen(
             ) {
                 Icon(Icons.Outlined.Bedtime, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
                 Text(
-                    text = if (sleepTimerState.isActive)
-                        "SLEEP · ${sleepMinutesLeft(sleepTimerState.remainingMs)} LEFT"
-                    else "SLEEP TIMER",
+                    text = when {
+                        sleepTimerState.isActive && sleepTimerState.endOfSong -> "SLEEP · END OF SONG"
+                        sleepTimerState.isActive -> "SLEEP · ${sleepMinutesLeft(sleepTimerState.remainingMs)} LEFT"
+                        else -> "SLEEP TIMER"
+                    },
                     color = tint,
                     style = adaptiveTypography().labelMedium,
                     fontWeight = FontWeight.ExtraBold
