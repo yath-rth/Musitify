@@ -1,6 +1,7 @@
 package com.yatharth.musitify.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.collection.CircularArray
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Reorder
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -178,6 +180,20 @@ fun HomeScreen(
                     .navigationBarsPadding(),
                 horizontalAlignment = Alignment.End
             ) {
+                CustomCircularButton(
+                    modifier = modifier,
+                    onClick = {
+                        homeScreenViewModel.syncLibrary()
+                        homeScreenViewModel.fetchLibrary()
+                    },
+                ){
+                    Icon(
+                        imageVector = Icons.Outlined.Sync,
+                        contentDescription = null,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+
                 PlaybackControls(
                     modifier = Modifier.fillMaxWidth(),
                     uiState = uiState,

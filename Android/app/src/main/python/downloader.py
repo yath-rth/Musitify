@@ -3,8 +3,46 @@ import time
 
 import json
 import os
-import time
-import yt_dlp
+import re
+
+_TOPIC = re.compile(r"\s+-\s+topic$", re.I)
+_VEVO = re.compile(r"\s*vevo$", re.I)
+_OFFICIAL_SUFFIX = re.compile(r"\s*[-|–]?\s*\(?\bofficial(?:\s+artist)?(?:\s+channel)?\)?$", re.I)
+_OFFICIAL_PREFIX = re.compile(r"^official\s+", re.I)
+_CAMEL = re.compile(r"(?<=[a-z])(?=[A-Z])")
+
+
+def clean_artist(name):
+    """Strips channel noise: 'X - Topic', 'XVEVO', 'X Official', 'Official X'."""
+    original = name.strip()
+    s = original
+    while True:
+        before = s
+        s = _TOPIC.sub("", s).strip()
+        if _VEVO.search(s):
+            s = _VEVO.sub("", s).strip()
+            if " " not in s:
+                s = _CAMEL.sub(" ", s)  # DaftPunkVEVO -> Daft Punk
+        s = _OFFICIAL_SUFFIX.sub("", s).strip()
+        s = _OFFICIAL_PREFIX.sub("", s).strip()
+        if s == before:
+            break
+    return s or original
+
+
+def pick_artist(info):
+    """artist -> artists (joined) -> uploader -> 'Unknown Artist'. Skips missing/blank values."""
+    artist = info.get("artist")
+    if isinstance(artist, str) and artist.strip():
+        return clean_artist(artist)
+    artists = [a.strip() for a in (info.get("artists") or []) if isinstance(a, str) and a.strip()]
+    if artists:
+        return ", ".join(artists)
+    uploader = info.get("uploader")
+    if isinstance(uploader, str) and uploader.strip():
+        return clean_artist(uploader)
+    return "Unknown Artist"
+
 
 def downloadSong(url, output_path, retries=3, delay=3):
     ydl_opts = {
@@ -31,12 +69,7 @@ def downloadSong(url, output_path, retries=3, delay=3):
                         thumbnail_path = path
                         break
                 
-                artist = (
-                        info.get("artist")
-                        or str(info.get("artists"))
-                        or info.get("uploader")
-                        or "Unknown Artist"
-                )
+                artist = pick_artist(info)
 
                 return {
                     "audio": audio_path,

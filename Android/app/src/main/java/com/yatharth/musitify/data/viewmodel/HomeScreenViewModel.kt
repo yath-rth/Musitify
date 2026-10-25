@@ -193,7 +193,7 @@ class HomeScreenViewModel @Inject constructor(
 
     fun syncLibrary() {
         viewModelScope.launch {
-//            syncController.sendData()
+            syncController.sendData()
             actionController.pushActions()
             actionController.pullActions()
         }
