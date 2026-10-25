@@ -6,6 +6,14 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import com.yatharth.musitify.ui.theme.primaryAction
+import com.yatharth.musitify.ui.elements.CustomButton
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -104,7 +112,6 @@ fun HomeScreen(
     homeScreenViewModel: HomeScreenViewModel = hiltViewModel(),
     playbackControllerViewModel: PlaybackControllerViewModel = hiltViewModel(),
     addSongsViewModel: AddSongsViewModel = hiltViewModel(),
-    onOpenStats: () -> Unit = {}
 ) {
     val TAG = "HomeScreen"
 
@@ -119,6 +126,7 @@ fun HomeScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableStateOf(HomeTab.LIBRARY) }
     var url by remember { mutableStateOf("") }
     var isPlaylistMode by remember { mutableStateOf(false) }
     var isListMode by remember { mutableStateOf(false) }
@@ -158,9 +166,8 @@ fun HomeScreen(
     var showRenamePlaylistDialog by remember { mutableStateOf(false) }
     var newPlaylistNameForRename by remember { mutableStateOf("") }
 
-    val selectedPlaylist: PlaylistInfo? = remember(selectedPlaylistId) {
+    val selectedPlaylist: PlaylistInfo? =
         playlists.firstOrNull { it.playlist.id == selectedPlaylistId }
-    }
 
     // Once a URL is queued, close the dialog; the queue card shows progress from here.
     LaunchedEffect(addState) {
@@ -182,7 +189,10 @@ fun HomeScreen(
         ?: allSongs.firstOrNull { it.name == uiState.currentTitle }
     val hasTrack = uiState.currentTitle != null
 
-    // Declared after the playlist handler so it wins while the player is open.
+    // Back from Stats returns to the library.
+    BackHandler(enabled = tab == HomeTab.STATS) { tab = HomeTab.LIBRARY }
+
+    // Declared after the other handlers so it wins while the player is open.
     BackHandler(enabled = showNowPlaying) { showNowPlaying = false }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -190,50 +200,42 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize(),
         containerColor = background,
+        topBar = {
+            AppHeader(
+                tab = tab,
+                onTabSelected = { tab = it },
+                onSync = {
+                    homeScreenViewModel.syncLibrary()
+                    homeScreenViewModel.fetchLibrary()
+                },
+                onAddSongs = { showAddDialog = true }
+            )
+        },
         bottomBar = {
-            Column(
+            PlaybackControls(
+                // Solid backing so scrolled content doesn't show through
+                // around the bar or behind the system navigation bar.
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(background)
                     .navigationBarsPadding(),
-                horizontalAlignment = Alignment.End
-            ) {
-                CustomCircularButton(
-                    modifier = modifier,
-                    onClick = {
-                        homeScreenViewModel.syncLibrary()
-                        homeScreenViewModel.fetchLibrary()
-                    },
-                ){
-                    Icon(
-                        imageVector = Icons.Outlined.Sync,
-                        contentDescription = null,
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
-
-                PlaybackControls(
-                    modifier = Modifier.fillMaxWidth(),
-                    uiState = uiState,
-                    onBack = { playbackControllerViewModel.previous() },
-                    onPause = { playbackControllerViewModel.pause() },
-                    onNext = { playbackControllerViewModel.next() },
-                    onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
-                    onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
-                    addSong = { showAddDialog = true },
-                    createPlaylist = { showPlaylistDialog = true },
-                    onStats = onOpenStats,
-                    onSleepTimer = { showSleepTimerDialog = true },
-                    sleepTimerActive = sleepTimerState.isActive,
-                    onOpenNowPlaying = if (hasTrack) ({ showNowPlaying = true }) else null
-                )
-            }
+                uiState = uiState,
+                onBack = { playbackControllerViewModel.previous() },
+                onPause = { playbackControllerViewModel.pause() },
+                onNext = { playbackControllerViewModel.next() },
+                onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
+                onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
+                onOpenNowPlaying = if (hasTrack) ({ showNowPlaying = true }) else null
+            )
         }
     ) { innerPadding ->
         val listedSongs = if (songFilterQuery.isBlank()) allSongs else filteredSongs
 
         // contentPadding (not padding) so cards scroll under the player bar
         // instead of being clipped above it.
-        LazyColumn(
+        if (tab == HomeTab.STATS) {
+            StatsContent(contentPadding = innerPadding)
+        } else LazyColumn(
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = 8.dp,
@@ -752,6 +754,84 @@ fun HomeScreen(
             onSleepTimer = { showSleepTimerDialog = true }
         )
     }
+    }
+}
+
+enum class HomeTab(val label: String) { LIBRARY("LIBRARY"), STATS("STATS") }
+
+/**
+ * Top bar: the two places in the app (Library, Stats) as tabs, plus the
+ * library actions. Replaces the stats button in the player bar and the
+ * floating sync button.
+ */
+@Composable
+private fun AppHeader(
+    tab: HomeTab,
+    onTabSelected: (HomeTab) -> Unit,
+    onSync: () -> Unit,
+    onAddSongs: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(background)
+            .statusBarsPadding()
+            .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .selectableGroup()
+        ) {
+            HomeTab.entries.forEach { t ->
+                val selected = t == tab
+                Column(
+                    modifier = Modifier
+                        .selectable(
+                            selected = selected,
+                            role = Role.Tab,
+                            onClick = { onTabSelected(t) }
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = t.label,
+                        color = if (selected) text else textSecondary,
+                        style = adaptiveTypography().labelLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .height(3.dp)
+                            .width(if (selected) 28.dp else 0.dp)
+                            .background(text, RoundedCornerShape(2.dp))
+                    )
+                }
+            }
+        }
+
+        if (tab == HomeTab.LIBRARY) {
+            CustomButton(onClick = onSync) {
+                Icon(
+                    imageVector = Icons.Outlined.Sync,
+                    contentDescription = "Sync library",
+                    tint = cardBorder,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+            CustomButton(onClick = onAddSongs, bgColor = primaryAction.copy(alpha = 0.2f)) {
+                Icon(
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = "Add songs",
+                    tint = cardBorder,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+        }
     }
 }
 

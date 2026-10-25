@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -57,121 +58,84 @@ import com.yatharth.musitify.util.Formatter
 import java.io.File
 import java.util.Calendar
 
+/**
+ * The Stats tab. Rendered inside the home screen's frame, so it shares the
+ * header tabs and the mini player instead of drawing its own copy of the bar.
+ */
 @Composable
-fun StatsScreen(
+fun StatsContent(
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
-    onClose: () -> Unit = {},
-    playbackControllerViewModel: PlaybackControllerViewModel = hiltViewModel(),
     statsViewModel: StatsViewModel = hiltViewModel()
 ) {
-    val uiState by playbackControllerViewModel.uiState.collectAsState()
     val stats by statsViewModel.stats.collectAsState()
-    val sleepTimerState by playbackControllerViewModel.sleepTimerState.collectAsState()
 
     LaunchedEffect(Unit) { statsViewModel.refresh() }
 
-    BackHandler(onBack = onClose)
-
-    androidx.compose.material3.Scaffold(
+    LazyColumn(
         modifier = modifier.fillMaxSize(),
-        containerColor = background,
-        bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding(),
-                horizontalAlignment = Alignment.End
-            ) {
-                PlaybackControls(
-                    modifier = Modifier.fillMaxWidth(),
-                    uiState = uiState,
-                    onBack = { playbackControllerViewModel.previous() },
-                    onPause = { playbackControllerViewModel.pause() },
-                    onNext = { playbackControllerViewModel.next() },
-                    onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
-                    onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
-                    addSong = {},
-                    createPlaylist = {},
-                    onStats = onClose,
-                    onSleepTimer = {},
-                    sleepTimerActive = sleepTimerState.isActive
-                )
+        contentPadding = PaddingValues(
+            start = 12.dp,
+            end = 12.dp,
+            top = contentPadding.calculateTopPadding() + 8.dp,
+            bottom = contentPadding.calculateBottomPadding() + 8.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (!stats.hasAnyListenTime) {
+            item { EmptyStatsCard() }
+        } else {
+            item { HeroTotalsCard(stats) }
+            item { InsightsCardsRow(stats) }
+            item { PeriodCardsRow(stats) }
+            if (stats.dailySeries.any { it.totalMs > 0 }) {
+                item { ListeningChartCard(stats.dailySeries) }
             }
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
             item {
-                Text(
-                    text = "YOUR STATS",
-                    color = text,
-                    style = adaptiveTypography().labelLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 2.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                TopListCard(
+                    title = "TOP SONGS · THIS MONTH",
+                    subtitle = "your most-played tracks lately",
+                    emptyLabel = "No listens this month yet",
+                    hasData = stats.topSongsThisMonth.isNotEmpty()
+                ) {
+                    stats.topSongsThisMonth.forEachIndexed { index, song ->
+                        SongStatRow(index, song, stats.topSongsThisMonth.firstOrNull()?.totalMs ?: 0)
+                    }
+                }
             }
-
-            if (!stats.hasAnyListenTime) {
-                item { EmptyStatsCard() }
-            } else {
-                item { HeroTotalsCard(stats) }
-                item { InsightsCardsRow(stats) }
-                item { PeriodCardsRow(stats) }
-                if (stats.dailySeries.any { it.totalMs > 0 }) {
-                    item { ListeningChartCard(stats.dailySeries) }
-                }
-                item {
-                    TopListCard(
-                        title = "TOP SONGS · THIS MONTH",
-                        subtitle = "your most-played tracks lately",
-                        emptyLabel = "No listens this month yet",
-                        hasData = stats.topSongsThisMonth.isNotEmpty()
-                    ) {
-                        stats.topSongsThisMonth.forEachIndexed { index, song ->
-                            SongStatRow(index, song, stats.topSongsThisMonth.firstOrNull()?.totalMs ?: 0)
-                        }
+            item {
+                TopListCard(
+                    title = "TOP SONGS · ALL TIME",
+                    subtitle = "your most-played tracks ever",
+                    emptyLabel = "Keep listening to fill this up",
+                    hasData = stats.topSongsAllTime.isNotEmpty()
+                ) {
+                    stats.topSongsAllTime.forEachIndexed { index, song ->
+                        SongStatRow(index, song, stats.topSongsAllTime.firstOrNull()?.totalMs ?: 0)
                     }
                 }
-                item {
-                    TopListCard(
-                        title = "TOP SONGS · ALL TIME",
-                        subtitle = "your most-played tracks ever",
-                        emptyLabel = "Keep listening to fill this up",
-                        hasData = stats.topSongsAllTime.isNotEmpty()
-                    ) {
-                        stats.topSongsAllTime.forEachIndexed { index, song ->
-                            SongStatRow(index, song, stats.topSongsAllTime.firstOrNull()?.totalMs ?: 0)
-                        }
+            }
+            item {
+                TopListCard(
+                    title = "TOP ARTISTS",
+                    subtitle = "artists you listen to the most",
+                    emptyLabel = "No artist data yet",
+                    hasData = stats.topArtists.isNotEmpty()
+                ) {
+                    stats.topArtists.forEachIndexed { index, artist ->
+                        ArtistStatRow(index, artist, stats.topArtists.firstOrNull()?.totalMs ?: 0)
                     }
                 }
-                item {
-                    TopListCard(
-                        title = "TOP ARTISTS",
-                        subtitle = "artists you listen to the most",
-                        emptyLabel = "No artist data yet",
-                        hasData = stats.topArtists.isNotEmpty()
-                    ) {
-                        stats.topArtists.forEachIndexed { index, artist ->
-                            ArtistStatRow(index, artist, stats.topArtists.firstOrNull()?.totalMs ?: 0)
-                        }
-                    }
-                }
-                item {
-                    TopListCard(
-                        title = "TOP PLAYLISTS",
-                        subtitle = "playlists you play the most",
-                        emptyLabel = "Play a playlist to see its stats here",
-                        hasData = stats.topPlaylists.isNotEmpty()
-                    ) {
-                        stats.topPlaylists.forEachIndexed { index, playlist ->
-                            PlaylistStatRow(index, playlist, stats.topPlaylists.firstOrNull()?.totalMs ?: 0)
-                        }
+            }
+            item {
+                TopListCard(
+                    title = "TOP PLAYLISTS",
+                    subtitle = "playlists you play the most",
+                    emptyLabel = "Play a playlist to see its stats here",
+                    hasData = stats.topPlaylists.isNotEmpty()
+                ) {
+                    stats.topPlaylists.forEachIndexed { index, playlist ->
+                        PlaylistStatRow(index, playlist, stats.topPlaylists.firstOrNull()?.totalMs ?: 0)
                     }
                 }
             }
