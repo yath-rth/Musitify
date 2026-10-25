@@ -201,13 +201,17 @@ class HomeScreenViewModel(
 
     fun syncLibrary() {
         launchReporting {
-            actionController.pushActions()
-            actionController.pullActions()
+            val pushed = actionController.pushActions()
+            val pulled = actionController.pullActions()
+            _message.value = "Synced: pushed $pushed, pulled $pulled"
         }
     }
 
     fun fetchLibrary() {
-        launchReporting { actionController.pullActions() }
+        launchReporting {
+            val pulled = actionController.pullActions()
+            _message.value = "Fetched: pulled $pulled"
+        }
     }
 
     fun reorderSongsInPlaylist(fromIndex: Int, toIndex: Int) {
