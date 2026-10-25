@@ -11,12 +11,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.offset
-import com.yatharth.musitify.ui.theme.secondaryBg
-import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.outlined.LibraryMusic
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBar
 import androidx.compose.material.icons.outlined.Download
 import com.yatharth.musitify.ui.theme.itemsBg
 import androidx.compose.material.icons.outlined.Shuffle
@@ -247,6 +241,7 @@ fun HomeScreen(
         topBar = {
             AppHeader(
                 tab = tab,
+                onTabSelected = { tab = it },
                 onSync = {
                     homeScreenViewModel.syncLibrary()
                     homeScreenViewModel.fetchLibrary()
@@ -255,13 +250,13 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            Column {
             PlaybackControls(
-                // Page background behind the bar so scrolled content doesn't
-                // show through around it.
+                // Solid backing so scrolled content doesn't show through
+                // around the bar or behind the system navigation bar.
                 modifier = Modifier
                     .fillMaxWidth()
-                    .dotGridBackground(),
+                    .dotGridBackground()
+                    .navigationBarsPadding(),
                 uiState = uiState,
                 title = currentSong?.let { SongDisplay.title(it) },
                 onBack = { playbackControllerViewModel.previous() },
@@ -271,8 +266,6 @@ fun HomeScreen(
                 onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
                 onOpenNowPlaying = if (hasTrack) ({ showNowPlaying = true }) else null
             )
-            BottomNav(tab = tab, onTabSelected = { tab = it })
-            }
         }
     ) { innerPadding ->
         val listedSongs = if (songFilterQuery.isBlank()) allSongs else filteredSongs
@@ -875,6 +868,7 @@ enum class HomeTab(val label: String) { LIBRARY("LIBRARY"), STATS("STATS") }
 @Composable
 private fun AppHeader(
     tab: HomeTab,
+    onTabSelected: (HomeTab) -> Unit,
     onSync: () -> Unit,
     onAddSongs: () -> Unit,
 ) {
@@ -883,20 +877,43 @@ private fun AppHeader(
             .fillMaxWidth()
             .dotGridBackground()
             .statusBarsPadding()
-            .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+            .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Screen-level heading: labelLarge, ExtraBold, wide tracking.
-        Text(
-            text = tab.label,
-            color = text,
-            style = adaptiveTypography().labelLarge,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 2.sp,
+        Row(
             modifier = Modifier
                 .weight(1f)
-                .padding(vertical = 14.dp)
-        )
+                .selectableGroup()
+        ) {
+            HomeTab.entries.forEach { t ->
+                val selected = t == tab
+                Column(
+                    modifier = Modifier
+                        .selectable(
+                            selected = selected,
+                            role = Role.Tab,
+                            onClick = { onTabSelected(t) }
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = t.label,
+                        color = if (selected) text else textSecondary,
+                        style = adaptiveTypography().labelLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .height(3.dp)
+                            .width(if (selected) 28.dp else 0.dp)
+                            .background(text, RoundedCornerShape(2.dp))
+                    )
+                }
+            }
+        }
 
         if (tab == HomeTab.LIBRARY) {
             CustomButton(onClick = onSync) {
@@ -1052,51 +1069,6 @@ private fun EmptyHint(title: String, body: String, action: String, onAction: () 
         actionLabel = action,
         onAction = onAction
     )
-}
-
-/**
- * Tracknix bottom navigation: NavigationBar on secondaryBg, with a hard
- * top border to match the outlined cards.
- */
-@Composable
-private fun BottomNav(tab: HomeTab, onTabSelected: (HomeTab) -> Unit) {
-    Column {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp)
-                .background(cardBorder)
-        )
-        NavigationBar(containerColor = secondaryBg, contentColor = text) {
-            HomeTab.entries.forEach { t ->
-                NavigationBarItem(
-                    selected = t == tab,
-                    onClick = { onTabSelected(t) },
-                    icon = {
-                        Icon(
-                            imageVector = if (t == HomeTab.LIBRARY) Icons.Outlined.LibraryMusic
-                            else Icons.Outlined.Insights,
-                            contentDescription = null
-                        )
-                    },
-                    label = {
-                        Text(
-                            text = t.label,
-                            style = adaptiveTypography().labelSmall,
-                            fontWeight = if (t == tab) FontWeight.ExtraBold else FontWeight.ExtraLight
-                        )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = text,
-                        selectedTextColor = text,
-                        indicatorColor = Color.Transparent, // no pill: Tracknix keeps rounding minimal
-                        unselectedIconColor = textSecondary,
-                        unselectedTextColor = textSecondary
-                    )
-                )
-            }
-        }
-    }
 }
 
 /**
