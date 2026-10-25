@@ -1,9 +1,8 @@
 package com.yatharth.musitify.platform
 
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import java.io.File
 import java.io.RandomAccessFile
 import java.net.InetAddress
@@ -44,13 +43,14 @@ object SingleInstance {
     private var lock: FileLock? = null
     private var server: ServerSocket? = null
 
-    private val _activations = MutableSharedFlow<Unit>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
+    /** Conflated so a signal arriving before the UI starts collecting isn't lost. */
+    private val _activations = Channel<Unit>(Channel.CONFLATED)
 
-    /** Emits whenever another launch asked this instance to bring its window to front. */
-    val activations: SharedFlow<Unit> = _activations.asSharedFlow()
+    /**
+     * Emits whenever another launch asked this instance to bring its window to front.
+     * Single consumer (collect it once, e.g. in a `LaunchedEffect` in `application {}`).
+     */
+    val activations: Flow<Unit> = _activations.receiveAsFlow()
 
     /**
      * Tries to become the primary instance.
@@ -114,7 +114,7 @@ object SingleInstance {
                         ss.accept().use { s ->
                             s.soTimeout = 1_000
                             val msg = s.getInputStream().readNBytes(SHOW_TOKEN.length).decodeToString()
-                            if (msg == SHOW_TOKEN) _activations.tryEmit(Unit)
+                            if (msg == SHOW_TOKEN) _activations.trySend(Unit)
                         }
                     } catch (_: Exception) {
                         // closed on release() or a bad client; loop condition decides
