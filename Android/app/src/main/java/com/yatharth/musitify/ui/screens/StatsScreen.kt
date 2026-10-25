@@ -70,9 +70,14 @@ fun StatsContent(
     modifier: Modifier = Modifier,
     statsViewModel: StatsViewModel = hiltViewModel()
 ) {
-    val stats by statsViewModel.stats.collectAsState()
+    val loaded by statsViewModel.stats.collectAsState()
 
     LaunchedEffect(Unit) { statsViewModel.refresh() }
+
+    val stats = loaded ?: run {
+        LoadingStatsCard(contentPadding)
+        return
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -112,9 +117,9 @@ fun StatsContent(
             }
             item {
                 TopListCard(
-                    title = "TOP SONGS · THIS MONTH",
+                    title = "TOP SONGS · LAST 30 DAYS",
                     subtitle = "your most-played tracks lately",
-                    emptyLabel = "No listens this month yet",
+                    emptyLabel = "No listens in the last 30 days",
                     hasData = stats.topSongsThisMonth.isNotEmpty()
                 ) {
                     stats.topSongsThisMonth.forEachIndexed { index, song ->
@@ -227,9 +232,33 @@ private fun StreakCard(stats: StatsSnapshot, modifier: Modifier = Modifier.fillM
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "last 7 days · best ${stats.longestStreak}",
+                text = if (stats.currentStreak > 0 && stats.todayListenMs == 0L)
+                    "play today to keep it going"
+                else "last 7 days · best ${stats.longestStreak}",
                 color = textSecondary,
                 style = adaptiveTypography().labelSmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoadingStatsCard(contentPadding: PaddingValues) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = 12.dp,
+                end = 12.dp,
+                top = contentPadding.calculateTopPadding() + 8.dp
+            )
+    ) {
+        ShadowBox(modifier = Modifier.fillMaxWidth(), alignment = Alignment.TopStart) {
+            Text(
+                text = "Adding up your listening…",
+                color = textSecondary,
+                style = adaptiveTypography().bodyMedium,
+                modifier = Modifier.padding(20.dp)
             )
         }
     }
@@ -336,14 +365,14 @@ private fun PeriodCardsRow(stats: StatsSnapshot) {
         )
         PeriodCard(
             modifier = Modifier.weight(1f),
-            label = "THIS WEEK",
+            label = "LAST 7 DAYS",
             value = Formatter.formatListenTime(stats.thisWeekListenMs),
             sub = "avg ${Formatter.formatListenTime(stats.thisWeekListenMs / 7)}/day",
             color = accentColor2
         )
         PeriodCard(
             modifier = Modifier.weight(1f),
-            label = "THIS MONTH",
+            label = "LAST 30 DAYS",
             value = Formatter.formatListenTime(stats.thisMonthListenMs),
             sub = Formatter.count(stats.listensThisMonth, "session"),
             color = accentColor3
