@@ -12,6 +12,7 @@ import com.yatharth.musitify.data.repository.SyncGateway
 import com.yatharth.musitify.data.viewmodel.AddSongsViewModel
 import com.yatharth.musitify.data.viewmodel.HomeScreenViewModel
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
+import com.yatharth.musitify.data.viewmodel.SettingsViewModel
 import com.yatharth.musitify.data.viewmodel.StatsViewModel
 import com.yatharth.musitify.engine.AudioPlayer
 import com.yatharth.musitify.engine.DownloadLibrary
@@ -44,6 +45,7 @@ val repositoryModule = module {
     viewModelOf(::HomeScreenViewModel)
     viewModelOf(::PlaybackControllerViewModel)
     viewModelOf(::StatsViewModel)
+    viewModelOf(::SettingsViewModel)
 }
 
 /** Engine paths for the app: songs in [AppPaths.musicDir], covers in [AppPaths.coversDir]. */
