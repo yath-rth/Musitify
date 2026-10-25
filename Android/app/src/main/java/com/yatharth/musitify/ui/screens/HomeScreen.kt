@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.screens
 
+import com.yatharth.musitify.util.SongDisplay
 import androidx.activity.compose.BackHandler
 import androidx.collection.CircularArray
 import androidx.compose.animation.AnimatedVisibility
@@ -249,6 +250,7 @@ fun HomeScreen(
                     .background(background)
                     .navigationBarsPadding(),
                 uiState = uiState,
+                title = currentSong?.let { SongDisplay.title(it) },
                 onBack = { playbackControllerViewModel.previous() },
                 onPause = { playbackControllerViewModel.pause() },
                 onNext = { playbackControllerViewModel.next() },
@@ -451,11 +453,12 @@ fun HomeScreen(
                             }
                         )
 
-                        IconButton(onClick = { isListMode = !isListMode }) {
+                        CustomButton(onClick = { isListMode = !isListMode }) {
                             Icon(
                                 imageVector = if (isListMode) Icons.Outlined.ViewCarousel else Icons.Outlined.List,
                                 contentDescription = if (isListMode) "Switch to carousel view" else "Switch to list view",
-                                tint = cardBorder
+                                tint = cardBorder,
+                                modifier = Modifier.padding(6.dp)
                             )
                         }
                     }
@@ -1356,7 +1359,7 @@ private fun SongListRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = song.name,
+                text = SongDisplay.title(song),
                 color = if (isPlaying) cardBorder else text,
                 style = adaptiveTypography().bodyMedium,
                 fontWeight = FontWeight.Medium,
@@ -1364,7 +1367,11 @@ private fun SongListRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${Formatter.formatTime(song.length)} · ${Formatter.count(playCountOf(song), "play")}",
+                text = listOfNotNull(
+                    SongDisplay.artist(song),
+                    Formatter.formatTime(song.length),
+                    Formatter.count(playCountOf(song), "play")
+                ).joinToString(" · "),
                 color = textSecondary,
                 style = adaptiveTypography().labelSmall
             )

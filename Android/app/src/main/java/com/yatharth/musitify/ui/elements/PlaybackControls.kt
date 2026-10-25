@@ -38,6 +38,8 @@ import com.yatharth.musitify.util.Formatter.formatTime
 fun PlaybackControls(
     modifier: Modifier,
     uiState: PlayerUiState,
+    // Display title (artist stripped); falls back to the player's raw title.
+    title: String? = null,
     onBack: () -> Unit,
     onPause: () -> Unit,
     onNext: () -> Unit,
@@ -70,7 +72,7 @@ fun PlaybackControls(
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 8.dp),
-                    label = uiState.currentTitle ?: "Nothing playing",
+                    label = title ?: uiState.currentTitle ?: "Nothing playing",
                     value = uiState.positionMs.toDouble(),
                     max = uiState.durationMs.toDouble(),
                     secondaryLabel = if (uiState.durationMs != 0L)

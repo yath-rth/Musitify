@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.elements
 
+import com.yatharth.musitify.util.SongDisplay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -198,7 +199,7 @@ private fun ReorderableSongRow(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = song.name,
+                        text = SongDisplay.title(song),
                         color = text,
                         style = adaptiveTypography().bodyMedium,
                         fontWeight = if (isPlaying) FontWeight.ExtraBold else FontWeight.Normal,
@@ -208,7 +209,8 @@ private fun ReorderableSongRow(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = if (isPlaying) "Now playing"
-                        else "${Formatter.formatTime(song.length)} · ${Formatter.count(playCountOf(song), "play")}",
+                        else listOfNotNull(SongDisplay.artist(song), Formatter.formatTime(song.length))
+                            .joinToString(" · "),
                         color = textSecondary,
                         style = adaptiveTypography().labelSmall
                     )

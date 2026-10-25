@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.elements
 
+import com.yatharth.musitify.util.SongDisplay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,7 +60,7 @@ fun SongContextMenuDialog(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = song.name,
+                        text = SongDisplay.title(song),
                         style = adaptiveTypography().bodyMedium,
                         color = text,
                         fontWeight = FontWeight.Bold,

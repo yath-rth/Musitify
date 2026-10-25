@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.elements
 
+import com.yatharth.musitify.util.SongDisplay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -171,7 +172,7 @@ private fun SongPicker(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = song.name,
+                        text = SongDisplay.title(song),
                         style = adaptiveTypography().bodySmall,
                         color = if (inPlaylist) textSecondary else text,
                         maxLines = 2,

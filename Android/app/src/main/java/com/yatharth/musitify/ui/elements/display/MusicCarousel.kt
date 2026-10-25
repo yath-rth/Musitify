@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.elements.display
 
+import com.yatharth.musitify.util.SongDisplay
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -180,13 +181,22 @@ fun AlbumArt(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = song.name,
-                maxLines = 2,
+                text = SongDisplay.title(song),
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = adaptiveTypography().bodyMedium,
                 color = text,
                 fontWeight = FontWeight.Normal
             )
+            SongDisplay.artist(song)?.let {
+                Text(
+                    text = it,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = adaptiveTypography().bodySmall,
+                    color = textSecondary
+                )
+            }
 
             Text(
                 text = Formatter.formatTime(song.length) + " \u2022 " + Formatter.count(playCountOf(song), "play"),

@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.screens
 
+import com.yatharth.musitify.util.SongDisplay
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -550,7 +551,7 @@ private fun TopListCard(
 private fun SongStatRow(index: Int, song: SongStat, maxMs: Long) {
     StatRowBase(
         rank = index,
-        title = song.name,
+        title = SongDisplay.title(song.name, song.artistName),
         subtitle = song.artistName,
         valueLabel = "${Formatter.formatListenTime(song.totalMs)} · ${Formatter.count(song.fullPlays, "play")}",
         shareValue = song.totalMs.toDouble(),

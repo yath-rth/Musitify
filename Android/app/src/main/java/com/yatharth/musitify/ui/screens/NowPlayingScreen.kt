@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.screens
 
+import com.yatharth.musitify.util.SongDisplay
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -182,13 +183,13 @@ fun NowPlayingScreen(
         // ---- Title ----
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = song?.name ?: uiState.currentTitle.orEmpty(),
+                text = song?.let { SongDisplay.title(it) } ?: uiState.currentTitle.orEmpty(),
                 color = text,
                 style = adaptiveTypography().titleSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            song?.artist?.takeIf { it.isNotBlank() }?.let {
+            song?.let { SongDisplay.artist(it) }?.let {
                 Text(
                     text = it,
                     color = textSecondary,
