@@ -2,6 +2,7 @@ package com.yatharth.musitify.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,6 +85,23 @@ fun StatsContent(
     ) {
         if (!stats.hasAnyListenTime) {
             item { EmptyStatsCard() }
+        } else if (stats.isEarly) {
+            // Rows of zeros and a one-bar chart read as failure; show a simpler
+            // view until there's enough history for trends.
+            item { GettingStartedCard(stats) }
+            item { StreakCard(stats) }
+            item {
+                TopListCard(
+                    title = "MOST PLAYED SO FAR",
+                    subtitle = "your top songs fill in as you listen",
+                    emptyLabel = "Keep listening to fill this up",
+                    hasData = stats.topSongsAllTime.isNotEmpty()
+                ) {
+                    stats.topSongsAllTime.forEachIndexed { index, song ->
+                        SongStatRow(index, song, stats.topSongsAllTime.firstOrNull()?.totalMs ?: 0)
+                    }
+                }
+            }
         } else {
             item { HeroTotalsCard(stats) }
             item { InsightsCardsRow(stats) }
@@ -143,6 +161,79 @@ fun StatsContent(
     }
 }
 
+/** Less than 3 days with listening, or under an hour in total. */
+private val StatsSnapshot.isEarly: Boolean
+    get() = dailySeries.count { it.totalMs > 0 } < 3 || totalListenMs < 60 * 60_000L
+
+@Composable
+private fun GettingStartedCard(stats: StatsSnapshot) {
+    ShadowBox(modifier = Modifier.fillMaxWidth(), alignment = Alignment.TopStart) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "GETTING STARTED",
+                color = text,
+                style = adaptiveTypography().labelSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "${Formatter.formatListenTime(stats.totalListenMs)} listened",
+                color = accentColor1,
+                style = adaptiveTypography().titleMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Across ${Formatter.count(stats.totalSessions, "session")}. Trends, your top artists " +
+                        "and playlists show up here after a few days of listening.",
+                color = textSecondary,
+                style = adaptiveTypography().bodySmall
+            )
+        }
+    }
+}
+
+/** Current streak plus the last seven days as filled / empty dots. */
+@Composable
+private fun StreakCard(stats: StatsSnapshot, modifier: Modifier = Modifier.fillMaxWidth()) {
+    val lastWeek = stats.dailySeries.takeLast(7)
+    ShadowBox(modifier = modifier, alignment = Alignment.CenterStart) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "STREAK",
+                color = textSecondary,
+                style = adaptiveTypography().labelSmall
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = Formatter.count(stats.currentStreak, "day"),
+                color = text,
+                style = adaptiveTypography().headlineMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                lastWeek.forEach { day ->
+                    val listened = day.totalMs > 0
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(if (listened) accentColor1 else Color.Transparent)
+                            .border(1.5.dp, cardBorder, RoundedCornerShape(3.dp))
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "last 7 days · best ${stats.longestStreak}",
+                color = textSecondary,
+                style = adaptiveTypography().labelSmall
+            )
+        }
+    }
+}
+
 @Composable
 private fun EmptyStatsCard() {
     ShadowBox(
@@ -159,8 +250,8 @@ private fun EmptyStatsCard() {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Play any song and your listening stats — total time, top songs, favourite playlists — will show up here, just like Spotify Wrapped.",
-                color = text.copy(alpha = 0.7f),
+                text = "Play any song and your listening time, top songs and favourite playlists show up here.",
+                color = textSecondary,
                 style = adaptiveTypography().bodySmall
             )
         }
@@ -217,21 +308,14 @@ private fun InsightsCardsRow(stats: StatsSnapshot) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        InsightCard(
-            modifier = Modifier.weight(1f),
-            label = "STREAK",
-            value = "${stats.currentStreak}",
-            sub = "current · ${stats.longestStreak} longest",
-            color = accentColor1,
-            icon = "🔥"
-        )
+        StreakCard(stats, modifier = Modifier.weight(1f))
         InsightCard(
             modifier = Modifier.weight(1f),
             label = "COMPLETION",
             value = "${stats.completionRate.toInt()}%",
             sub = "songs finished",
-            color = accentColor2,
-            icon = "✓"
+            color = text,
+            icon = ""
         )
     }
 }
@@ -292,10 +376,12 @@ private fun InsightCard(
                     fontWeight = FontWeight.Normal,
                     letterSpacing = 1.sp
                 )
-                Text(
-                    text = icon,
-                    style = adaptiveTypography().bodyMedium
-                )
+                if (icon.isNotEmpty()) {
+                    Text(
+                        text = icon,
+                        style = adaptiveTypography().bodyMedium
+                    )
+                }
             }
             Spacer(Modifier.height(4.dp))
             Text(
@@ -344,14 +430,6 @@ private fun PeriodCard(
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .height(4.dp)
-                    .width(28.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(color)
             )
             sub?.let {
                 Spacer(Modifier.height(4.dp))
@@ -500,7 +578,7 @@ private fun ArtistStatRow(index: Int, artist: ArtistStat, maxMs: Long) {
         valueLabel = Formatter.formatListenTime(artist.totalMs),
         shareValue = artist.totalMs.toDouble(),
         shareMax = if (maxMs > 0) maxMs.toDouble() else 1.0,
-        color = accentColor2
+        color = accentColor1
     ) {
         Box(
             modifier = Modifier
@@ -528,7 +606,7 @@ private fun PlaylistStatRow(index: Int, playlist: PlaylistStat, maxMs: Long) {
         valueLabel = Formatter.formatListenTime(playlist.totalMs),
         shareValue = playlist.totalMs.toDouble(),
         shareMax = if (maxMs > 0) maxMs.toDouble() else 1.0,
-        color = accentColor3
+        color = accentColor1
     ) {
         Box(
             modifier = Modifier
