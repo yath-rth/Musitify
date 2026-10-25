@@ -129,11 +129,29 @@ class PlaylistRepository @Inject constructor(
         return playlistDao.getAllPlaylistsFrom(names)
     }
 
-    suspend fun generatePlaylistArt(playlistId: Int) = withContext(Dispatchers.IO) {
+    /**
+     * Renders the playlist cover and stores its path. [refresh] re-renders an existing cover
+     * (sync changes the songs after creation). Does nothing for an empty playlist.
+     */
+    suspend fun generatePlaylistArt(playlistId: Int, refresh: Boolean = false) = withContext(Dispatchers.IO) {
         val songRelations = playlistDao.getSongsForPlaylistSuspend(playlistId)
+        if (songRelations.isEmpty()) return@withContext
         val songs = songDao.getSongsByIds(songRelations.map { it.id })
-        val art = getOrCreatePlaylistCover(playlistId, songs)
+        val art = getOrCreatePlaylistCover(playlistId, songs, refresh)
         playlistDao.updateArt(playlistId, art.path)
+    }
+
+    /** Re-renders the cover of the playlist with [playlistUuid], if it exists. */
+    suspend fun refreshPlaylistArtByUuid(playlistUuid: String) = withContext(Dispatchers.IO) {
+        val playlist = playlistDao.getPlaylistByUuid(playlistUuid) ?: return@withContext
+        generatePlaylistArt(playlist.id, refresh = true)
+    }
+
+    /** Generates covers for playlists that have songs but no cover yet (e.g. synced before this fix). */
+    suspend fun generateMissingPlaylistArt() = withContext(Dispatchers.IO) {
+        playlistDao.getAllPlaylistsSuspend()
+            .filter { it.artPath.isNullOrBlank() || !File(it.artPath).isFile }
+            .forEach { generatePlaylistArt(it.id, refresh = true) }
     }
 
     suspend fun createPlaylistAndAddSongs(name: String, songs: Map<Int, Song>) =
@@ -143,10 +161,10 @@ class PlaylistRepository @Inject constructor(
             generatePlaylistArt(playlist.id)
         }
 
-    fun getOrCreatePlaylistCover(playlistId: Int, songs: List<Song>): File {
+    fun getOrCreatePlaylistCover(playlistId: Int, songs: List<Song>, refresh: Boolean = false): File {
         val coversDir = File(context.filesDir, "playlist_covers").apply { mkdirs() }
         val outFile = File(coversDir, "playlist_$playlistId.png")
-        if (outFile.exists()) return outFile
+        if (!refresh && outFile.exists()) return outFile
 
         val artPaths = songs.take(min(4, songs.size)).map { it.artPath }
         return cachePlaylistCover(context, playlistId, artPaths)

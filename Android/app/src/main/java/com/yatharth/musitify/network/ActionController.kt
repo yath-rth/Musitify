@@ -97,6 +97,7 @@ class ActionController @Inject constructor(
                     if (syncActions.isNotEmpty()) {
                         remoteChangesManager.apply(syncActions)
                     }
+                    remoteChangesManager.generateMissingCovers()
 
                     val maxId = nActions.maxOfOrNull { it.localId }
                     if (maxId != null) {

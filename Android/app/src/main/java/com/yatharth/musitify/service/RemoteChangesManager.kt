@@ -17,6 +17,7 @@ class RemoteChangesManager @Inject constructor(
     private val TAG = "RemoteChanges"
 
     suspend fun apply(actions: List<SyncAction>) {
+        val touchedPlaylists = mutableSetOf<String>()
         for (action in actions) {
             try {
                 when (action.type) {
@@ -65,7 +66,8 @@ class RemoteChangesManager @Inject constructor(
                             songUuid = action.songUuid,
                             playlistUuid = action.playlistUuid,
                             payload = action.payload
-                        );
+                        )
+                        action.playlistUuid?.let { touchedPlaylists += it }
                     }
 
                     ActionType.SONG_REMOVED_FROM_PLAYLIST -> {
@@ -73,6 +75,7 @@ class RemoteChangesManager @Inject constructor(
                             songUuid = action.songUuid,
                             playlistUuid = action.playlistUuid
                         )
+                        action.playlistUuid?.let { touchedPlaylists += it }
                     }
 
                     ActionType.PLAYLIST_SONG_REORDERED -> {
@@ -87,6 +90,23 @@ class RemoteChangesManager @Inject constructor(
             } catch (e: Exception) {
                 Log.d(TAG, e.message.toString())
             }
+        }
+        // Covers depend on the playlist's songs, so re-render once per touched playlist.
+        for (playlistUuid in touchedPlaylists) {
+            try {
+                playlistRepository.refreshPlaylistArtByUuid(playlistUuid)
+            } catch (e: Exception) {
+                Log.d(TAG, "Cover for playlist $playlistUuid failed: ${e.message}")
+            }
+        }
+    }
+
+    /** Backfills covers for playlists that have songs but no cover file. Never throws. */
+    suspend fun generateMissingCovers() {
+        try {
+            playlistRepository.generateMissingPlaylistArt()
+        } catch (e: Exception) {
+            Log.d(TAG, "Cover backfill failed: ${e.message}")
         }
     }
 
