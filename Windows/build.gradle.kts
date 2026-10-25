@@ -1,4 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import java.net.HttpURLConnection
+import java.net.URI
+import java.util.zip.ZipFile
 
 plugins {
     kotlin("jvm") version "2.4.10"
@@ -60,12 +63,99 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+// ---------------------------------------------------------------------------
+// Bundled native tools (yt-dlp.exe, ffmpeg.exe, ffprobe.exe)
+//
+// downloadTools  -> fetches the exes into ./bin (gitignored), skipped if present
+// stageTools     -> copies them into build/appResources/windows/ which is the
+//                   Compose `appResourcesRootDir`; at runtime the folder is exposed
+//                   through System.getProperty("compose.application.resources.dir")
+// ---------------------------------------------------------------------------
+val toolsBinDir = layout.projectDirectory.dir("bin")
+val appResourcesRoot = layout.buildDirectory.dir("appResources")
+
+val downloadTools by tasks.registering {
+    group = "musitify"
+    description = "Downloads yt-dlp.exe, ffmpeg.exe and ffprobe.exe into ./bin"
+    val binDir = toolsBinDir.asFile
+    outputs.dir(binDir)
+    outputs.upToDateWhen {
+        listOf("yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe").all { File(binDir, it).isFile }
+    }
+    doLast {
+        binDir.mkdirs()
+        fun fetch(url: String, dest: File) {
+            val tmp = File(dest.parentFile, dest.name + ".part")
+            var lastError: Exception? = null
+            for (attempt in 1..3) {
+                try {
+                    logger.lifecycle("Downloading $url (attempt $attempt)")
+                    val conn = URI(url).toURL().openConnection() as HttpURLConnection
+                    conn.instanceFollowRedirects = true
+                    conn.connectTimeout = 30_000
+                    conn.readTimeout = 120_000
+                    conn.setRequestProperty("User-Agent", "Musitify-build")
+                    conn.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                    if (dest.exists()) dest.delete()
+                    check(tmp.renameTo(dest)) { "Could not move $tmp to $dest" }
+                    return
+                } catch (e: Exception) {
+                    lastError = e
+                    logger.warn("Download failed: ${e.message}")
+                    tmp.delete()
+                }
+            }
+            throw GradleException("Failed to download $url", lastError)
+        }
+
+        val ytDlp = File(binDir, "yt-dlp.exe")
+        if (!ytDlp.isFile) {
+            fetch("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe", ytDlp)
+        }
+
+        val wanted = listOf("ffmpeg.exe", "ffprobe.exe")
+        if (wanted.any { !File(binDir, it).isFile }) {
+            val zip = File(temporaryDir, "ffmpeg.zip")
+            fetch(
+                "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
+                zip
+            )
+            ZipFile(zip).use { zf ->
+                for (name in wanted) {
+                    val entry = zf.entries().asSequence()
+                        .firstOrNull { !it.isDirectory && it.name.substringAfterLast('/') == name && it.name.contains("/bin/") }
+                        ?: error("$name not found in ffmpeg archive")
+                    zf.getInputStream(entry).use { input ->
+                        File(binDir, name).outputStream().use { input.copyTo(it) }
+                    }
+                }
+            }
+            zip.delete()
+        }
+    }
+}
+
+val stageTools by tasks.registering(Sync::class) {
+    group = "musitify"
+    description = "Stages bundled tools under the Compose appResources/windows folder"
+    dependsOn(downloadTools)
+    from(toolsBinDir) { include("yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe") }
+    into(appResourcesRoot.map { it.dir("windows") })
+}
+
+tasks.matching {
+    it.name == "prepareAppResources" || it.name == "run" || it.name.startsWith("package") ||
+        it.name.startsWith("createDistributable") || it.name.startsWith("createRuntimeImage") ||
+        it.name.startsWith("runDistributable") || it.name.startsWith("runRelease")
+}.configureEach { dependsOn(stageTools) }
+
 compose.desktop {
     application {
         mainClass = "com.yatharth.musitify.MainKt"
         jvmArgs += listOf("-Dfile.encoding=UTF-8")
 
         nativeDistributions {
+            appResourcesRootDir.set(appResourcesRoot)
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Musitify"
             packageVersion = "1.0.0"
