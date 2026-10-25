@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -228,11 +229,18 @@ fun HomeScreen(
             }
         }
     ) { innerPadding ->
+        val listedSongs = if (songFilterQuery.isBlank()) allSongs else filteredSongs
+
+        // contentPadding (not padding) so cards scroll under the player bar
+        // instead of being clipped above it.
         LazyColumn(
-            modifier = modifier
-                .navigationBarsPadding()
-                .padding(innerPadding)
-                .padding(8.dp)
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 8.dp,
+                end = 8.dp,
+                top = innerPadding.calculateTopPadding() + 8.dp,
+                bottom = innerPadding.calculateBottomPadding() + 8.dp
+            )
         ) {
 
             // ---- Download queue ----
@@ -288,7 +296,9 @@ fun HomeScreen(
                 AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
                     PlaylistCarousel(
                         playlists = playlists,
-                        currentPlayingIndex = selectedPlaylistId?.coerceAtLeast(0) ?: 0,
+                        // A position in the list, not the playlist's database id.
+                        currentPlayingIndex = playlists.indexOfFirst { it.playlist.id == selectedPlaylistId }
+                            .coerceAtLeast(0),
                         onPlaylistSelected = { index -> homeScreenViewModel.loadPlaylist(index) },
                         onLongClick = { playlist ->
                             playlistForContextMenu = playlist
@@ -304,7 +314,7 @@ fun HomeScreen(
                     AnimatedVisibility(visible = songsInPlaylist.isNotEmpty() && !isReorderMode) {
                         MusicCarousel(
                             songs = songsInPlaylist,
-                            currentPlayingIndex = songsInPlaylist.indexOfFirst { it.name == uiState.currentTitle }
+                            currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id }
                                 .coerceAtLeast(0),
                             onTrackSelected = { index ->
                                 playbackControllerViewModel.playSongs(
@@ -335,7 +345,7 @@ fun HomeScreen(
                             )
                             ReorderableSongList(
                                 songs = songsInPlaylist,
-                                currentPlayingIndex = songsInPlaylist.indexOfFirst { it.name == uiState.currentTitle }
+                                currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id }
                                     .coerceAtLeast(0),
                                 onTrackSelected = { index ->
                                     playbackControllerViewModel.playSongs(
@@ -358,8 +368,8 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            item {
-                AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
+            if (songsInPlaylist.isEmpty()) {
+                item(key = "songs_header") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -389,78 +399,67 @@ fun HomeScreen(
                                 tint = cardBorder
                             )
                         }
-
                     }
                 }
 
-                AnimatedVisibility(visible = songsInPlaylist.isEmpty() && !isListMode) {
-                    MusicCarousel(
-                        songs = allSongs,
-                        scroll = false,
-                        currentPlayingIndex = allSongs.indexOfFirst { it.name == uiState.currentTitle }
-                            .coerceAtLeast(0),
-                        onTrackSelected = { index ->
-                            playbackControllerViewModel.playSongs(
-                                allSongs,
-                                index,
-                                null
-                            )
-                        },
-                        onLongSelect = { song ->
-                            songForContextMenu = song
-                            showSongContextMenu = true
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    )
-                }
-
-                AnimatedVisibility(visible = songsInPlaylist.isEmpty() && isListMode) {
-                    ShadowBox(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 500.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp)
+                if (!isListMode) {
+                    item(key = "songs_carousel") {
+                        MusicCarousel(
+                            songs = allSongs,
+                            scroll = false,
+                            currentPlayingIndex = allSongs.indexOfFirst { it.id == currentSong?.id }
+                                .coerceAtLeast(0),
+                            onTrackSelected = { index ->
+                                playbackControllerViewModel.playSongs(
+                                    allSongs,
+                                    index,
+                                    null
+                                )
+                            },
+                            onLongSelect = { song ->
+                                songForContextMenu = song
+                                showSongContextMenu = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
                         )
-                        {
+                    }
+                } else {
+                    // Rows are part of this one scrolling list, so nothing gets
+                    // cut off inside a fixed-height box.
+                    item(key = "songs_search") {
+                        Column {
                             LibrarySearchBar(
                                 query = songFilterQuery,
                                 onQueryChange = { homeScreenViewModel.onSearchQueryChange(it) },
                                 placeholder = "search your library"
                             )
-                            val listedSongs =
-                                if (songFilterQuery.isBlank()) allSongs else filteredSongs
                             if (listedSongs.isEmpty() && songFilterQuery.isNotBlank()) {
                                 NoSearchResults(
                                     query = songFilterQuery,
                                     onClear = { homeScreenViewModel.onSearchQueryChange("") }
                                 )
                             }
-                            LazyColumn(
-                                Modifier.padding(vertical = 12.dp)
-                            ) {
-                                items(listedSongs) { song ->
-                                    SongListRow(
-                                        song = song,
-                                        isPlaying = song.name == uiState.currentTitle,
-                                        onClick = {
-                                            playbackControllerViewModel.playSongs(
-                                                listedSongs,
-                                                listedSongs.indexOf(song),
-                                                null
-                                            )
-                                        },
-                                        // Same menu as the carousel; delete is one of its options.
-                                        onLongClick = {
-                                            songForContextMenu = song
-                                            showSongContextMenu = true
-                                        }
-                                    )
-                                }
-                            }
+                            Spacer(Modifier.height(8.dp))
                         }
+                    }
+                    items(listedSongs, key = { "song_${it.id}" }) { song ->
+                        SongListRow(
+                            song = song,
+                            isPlaying = song.id == currentSong?.id,
+                            onClick = {
+                                playbackControllerViewModel.playSongs(
+                                    listedSongs,
+                                    listedSongs.indexOf(song),
+                                    null
+                                )
+                            },
+                            // Same menu as the carousel; delete is one of its options.
+                            onLongClick = {
+                                songForContextMenu = song
+                                showSongContextMenu = true
+                            }
+                        )
                     }
                 }
             }

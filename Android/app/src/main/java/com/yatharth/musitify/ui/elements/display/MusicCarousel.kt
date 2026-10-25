@@ -98,8 +98,8 @@ fun MusicCarousel(
             val distanceFromCenter = if (abs(rawDistance) < threshold) 0f else rawDistance
 
             val scaleTarget = lerp(1f, 0.75f, abs(distanceFromCenter))
-            val rotationTarget = lerp(0f, 45f, distanceFromCenter)
-            val alphaTarget = lerp(1f, 0.5f, abs(distanceFromCenter))
+            val rotationTarget = lerp(0f, 25f, distanceFromCenter)
+            val alphaTarget = lerp(1f, 0.75f, abs(distanceFromCenter))
             val isNearCenter = abs(distanceFromCenter) < 0.15f
 
             val isPlaying = index == currentPlayingIndex

@@ -92,8 +92,8 @@ fun PlaylistCarousel(
             val distanceFromCenter = if (abs(rawDistance) < 0.5f) 0f else rawDistance
 
             val scale = lerp(1f, 0.75f, abs(distanceFromCenter))
-            val rotationY = lerp(0f, 45f, distanceFromCenter)
-            val alpha = lerp(1f, 0.5f, abs(distanceFromCenter))
+            val rotationY = lerp(0f, 25f, distanceFromCenter)
+            val alpha = lerp(1f, 0.75f, abs(distanceFromCenter))
             val isNearCenter = abs(distanceFromCenter) < 0.15f
 
             Box(
@@ -116,7 +116,7 @@ fun PlaylistCarousel(
                                 onPlaylistSelected(playlistInfo.playlist.id)
                             } else {
                                 coroutineScope.launch {
-                                    listState.animateScrollToItem(playlistInfo.playlist.id)
+                                    listState.animateScrollToItem(index)
                                 }
                             }
                         }
@@ -141,8 +141,8 @@ fun PlaylistCarousel(
             val distanceFromCenter = if (abs(rawDistance) < 0.5f) 0f else rawDistance
 
             val scale = lerp(1f, 0.75f, abs(distanceFromCenter))
-            val rotationY = lerp(0f, 45f, distanceFromCenter)
-            val alpha = lerp(1f, 0.5f, abs(distanceFromCenter))
+            val rotationY = lerp(0f, 25f, distanceFromCenter)
+            val alpha = lerp(1f, 0.75f, abs(distanceFromCenter))
 
             Box(
                 modifier = Modifier
