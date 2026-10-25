@@ -50,7 +50,7 @@ val repositoryModule = module {
 
 /** Engine paths for the app: songs in [AppPaths.musicDir], covers in [AppPaths.coversDir]. */
 fun appEnginePaths(): EnginePaths = EnginePaths(
-    songsDir = AppPaths.musicDir,
+    songsDirProvider = { AppPaths.musicDir },
     engineDataDir = File(AppPaths.dataDir, "engine"),
     playlistCoversDir = AppPaths.coversDir,
 )

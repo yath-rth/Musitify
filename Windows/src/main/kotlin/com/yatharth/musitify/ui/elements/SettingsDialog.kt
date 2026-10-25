@@ -151,7 +151,7 @@ fun SettingsDialog(onDismiss: () -> Unit) {
                 )
             }
             Hint(
-                if (musicDirChanged) "New downloads will be saved here after restarting Musitify. Existing songs stay where they are."
+                if (musicDirChanged) "New downloads will be saved here. Existing songs stay where they are."
                 else "New downloads are saved to this folder. Existing songs stay where they are."
             )
 
