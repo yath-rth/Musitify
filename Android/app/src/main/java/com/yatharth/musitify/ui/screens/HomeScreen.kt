@@ -1,5 +1,8 @@
 package com.yatharth.musitify.ui.screens
 
+import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material.icons.outlined.QueueMusic
+import com.yatharth.musitify.ui.elements.EmptyState
 import com.yatharth.musitify.util.SongDisplay
 import androidx.activity.compose.BackHandler
 import androidx.collection.CircularArray
@@ -7,6 +10,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
 import com.yatharth.musitify.ui.theme.secondaryBg
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.LibraryMusic
@@ -1041,22 +1045,13 @@ private fun LabeledButton(
 /** Empty state with one clear next step. */
 @Composable
 private fun EmptyHint(title: String, body: String, action: String, onAction: () -> Unit) {
-    ShadowBox(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        alignment = Alignment.TopStart
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(text = title, color = text, style = adaptiveTypography().bodyLarge, fontWeight = FontWeight.ExtraBold)
-            Text(text = body, color = textSecondary, style = adaptiveTypography().bodySmall)
-            Spacer(Modifier.height(4.dp))
-            LabeledButton(action, Icons.Outlined.Add, filled = false, onClick = onAction)
-        }
-    }
+    EmptyState(
+        title = title,
+        message = body,
+        icon = Icons.Outlined.QueueMusic,
+        actionLabel = action,
+        onAction = onAction
+    )
 }
 
 /**
@@ -1317,31 +1312,13 @@ private fun LibrarySearchBar(
 /** Shown in place of the list when a search matches nothing. */
 @Composable
 private fun NoSearchResults(query: String, onClear: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "No songs match \"$query\"",
-            color = text,
-            style = adaptiveTypography().bodyMedium
-        )
-        Text(
-            text = "Check the spelling, or search by artist.",
-            color = textSecondary,
-            style = adaptiveTypography().labelSmall
-        )
-        TextButton(onClick = onClear) {
-            Text(
-                text = "CLEAR SEARCH",
-                color = text,
-                style = adaptiveTypography().labelMedium,
-                fontWeight = FontWeight.ExtraBold
-            )
-        }
-    }
+    EmptyState(
+        title = "No matches",
+        message = "Nothing in your library matches \"$query\". Check the spelling, or search by artist.",
+        icon = Icons.Outlined.SearchOff,
+        actionLabel = "CLEAR SEARCH",
+        onAction = onClear
+    )
 }
 
 /**
@@ -1361,41 +1338,62 @@ private fun SongListRow(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    // Tracknix list item: each row is its own small card (3dp hard shadow,
+    // 1.5dp border) so it reads cleanly above the dot grid.
+    val shape = RoundedCornerShape(4.dp)
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 6.dp)
     ) {
-        AsyncImage(
-            model = File(song.artPath),
-            contentDescription = song.name,
+        Box(
             modifier = Modifier
-                .size(34.dp)
-                .aspectRatio(1f),
-            contentScale = ContentScale.Crop
+                .matchParentSize()
+                .offset(3.dp, 3.dp)
+                .background(cardBorder, shape)
         )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(itemsBg)
+                .border(1.5.dp, cardBorder, shape)
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                .padding(12.dp)
+        ) {
+            AsyncImage(
+                model = File(song.artPath),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                contentScale = ContentScale.Crop
+            )
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = SongDisplay.title(song),
-                color = if (isPlaying) cardBorder else text,
-                style = adaptiveTypography().bodyMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = listOfNotNull(
-                    SongDisplay.artist(song),
-                    Formatter.formatTime(song.length),
-                    Formatter.count(playCountOf(song), "play")
-                ).joinToString(" · "),
-                color = textSecondary,
-                style = adaptiveTypography().labelSmall
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = SongDisplay.title(song),
+                    color = text,
+                    style = adaptiveTypography().bodyMedium,
+                    fontWeight = if (isPlaying) FontWeight.ExtraBold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (isPlaying) "Now playing"
+                    else listOfNotNull(
+                        SongDisplay.artist(song),
+                        Formatter.formatTime(song.length),
+                        Formatter.count(playCountOf(song), "play")
+                    ).joinToString(" · "),
+                    color = textSecondary,
+                    style = adaptiveTypography().labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

@@ -1,5 +1,9 @@
 package com.yatharth.musitify.ui.screens
 
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.Icons
+import com.yatharth.musitify.ui.elements.LoadingState
+import com.yatharth.musitify.ui.elements.EmptyState
 import com.yatharth.musitify.util.SongDisplay
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -244,48 +248,19 @@ private fun StreakCard(stats: StatsSnapshot, modifier: Modifier = Modifier.fillM
 
 @Composable
 private fun LoadingStatsCard(contentPadding: PaddingValues) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = contentPadding.calculateTopPadding() + 8.dp
-            )
-    ) {
-        ShadowBox(modifier = Modifier.fillMaxWidth(), alignment = Alignment.TopStart) {
-            Text(
-                text = "Adding up your listening…",
-                color = textSecondary,
-                style = adaptiveTypography().bodyMedium,
-                modifier = Modifier.padding(20.dp)
-            )
-        }
-    }
+    LoadingState(
+        label = "Adding up your listening…",
+        modifier = Modifier.padding(top = contentPadding.calculateTopPadding())
+    )
 }
 
 @Composable
 private fun EmptyStatsCard() {
-    ShadowBox(
-        modifier = Modifier.fillMaxWidth(),
-        alignment = Alignment.TopStart
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "NO LISTENING HISTORY YET",
-                color = text,
-                style = adaptiveTypography().labelSmall,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.5.sp
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Play any song and your listening time, top songs and favourite playlists show up here.",
-                color = textSecondary,
-                style = adaptiveTypography().bodySmall
-            )
-        }
-    }
+    EmptyState(
+        title = "No listening history yet",
+        message = "Play any song and your listening time, top songs and favourite playlists show up here.",
+        icon = Icons.Outlined.Insights
+    )
 }
 
 @Composable
