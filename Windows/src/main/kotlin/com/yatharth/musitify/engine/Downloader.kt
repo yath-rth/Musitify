@@ -34,6 +34,12 @@ data class DownloadedSong(
     val artPath: String?,
 )
 
+/** Abstraction over [Downloader] so [DownloadQueue] can be tested / swapped. */
+interface SongDownloader {
+    suspend fun fetchPlaylist(playlistUrl: String): PlaylistInfo
+    suspend fun downloadSong(url: String, outputDir: File, onProgress: ((Float) -> Unit)? = null): DownloadedSong
+}
+
 class DownloadException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
 
 /**
@@ -58,11 +64,11 @@ class Downloader(
     private val ffmpeg: () -> File = Tools::ffmpeg,
     private val retries: Int = 3,
     private val retryDelayMs: Long = 3_000,
-) {
+) : SongDownloader {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     /** Flat playlist listing. No retry (same as Android). */
-    suspend fun fetchPlaylist(playlistUrl: String): PlaylistInfo {
+    override suspend fun fetchPlaylist(playlistUrl: String): PlaylistInfo {
         val cmd = listOf(
             ytDlp().absolutePath,
             "--flat-playlist", "-J", "-q", "--no-warnings", "--encoding", "utf-8",
@@ -85,10 +91,10 @@ class Downloader(
      * @param onProgress optional 0..1 download progress (from yt-dlp), called on a reader thread.
      * @throws DownloadException / ProcessFailedException on failure, CancellationException on cancel.
      */
-    suspend fun downloadSong(
+    override suspend fun downloadSong(
         url: String,
         outputDir: File,
-        onProgress: ((Float) -> Unit)? = null,
+        onProgress: ((Float) -> Unit)?,
     ): DownloadedSong {
         outputDir.mkdirs()
         var lastError: Exception? = null
