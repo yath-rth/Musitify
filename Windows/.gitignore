@@ -1,0 +1,15 @@
+build/
+.gradle/
+.kotlin/
+.idea/
+*.iml
+local.properties
+
+# Bundled yt-dlp.exe / ffmpeg.exe are downloaded at build time, never committed
+/bin/
+
+# Root .gitignore ignores these globally; the desktop app needs its own copies
+!src/main/resources/**/*.png
+!src/main/resources/**/*.json
+!src/main/resources/**/*.ico
+!schemas/**/*.json
