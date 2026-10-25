@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +34,7 @@ fun CustomAlertBox(
     dontShowAgain: Boolean? = null,
     onDontShowAgainChange: (Boolean) -> Unit = {},
 ) {
-    AlertDialog(
+    MusitifyDialog(
         onDismissRequest = { showClearConfirm.value = false }, title = {
             Text(
                 text = title.uppercase(),
@@ -111,6 +110,6 @@ fun CustomAlertBox(
                         .padding(10.dp)
                 )
             }
-        }, containerColor = secondaryBg
+        }
     )
 }

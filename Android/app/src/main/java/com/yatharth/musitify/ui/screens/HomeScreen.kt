@@ -111,6 +111,7 @@ import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
 import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
+import com.yatharth.musitify.util.LinkDetector
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import java.io.File
 
@@ -136,7 +137,6 @@ fun HomeScreen(
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var tab by rememberSaveable { mutableStateOf(HomeTab.LIBRARY) }
     var url by remember { mutableStateOf("") }
-    var isPlaylistMode by remember { mutableStateOf(false) }
     var isListMode by remember { mutableStateOf(false) }
     var isReorderMode by remember { mutableStateOf(false) }
 
@@ -535,15 +535,10 @@ fun HomeScreen(
                 },
                 url = url,
                 onUrlChange = { url = it },
-                isPlaylistMode = isPlaylistMode,
-                onModeChange = {
-                    isPlaylistMode = it
-                    addSongsViewModel.resetState()
-                },
                 state = addState,
                 onSubmit = {
                     if (url.isNotBlank()) {
-                        if (isPlaylistMode) addSongsViewModel.addPlaylist(url)
+                        if (LinkDetector.isPlaylist(url)) addSongsViewModel.addPlaylist(url)
                         else addSongsViewModel.addSingleSong(url)
                     }
                 }
@@ -645,6 +640,7 @@ fun HomeScreen(
                 },
                 onAddToPlaylist = {
                     showSongContextMenu = false
+                    isAddToExistingPlaylistMode = playlists.isNotEmpty()
                     showAddToPlaylistDialog = true
                 },
                 onRename = {

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,7 +33,7 @@ fun SleepTimerDialog(
     onCancelTimer: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    MusitifyDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -180,8 +179,7 @@ fun SleepTimerDialog(
                         .padding(10.dp)
                 )
             }
-        },
-        containerColor = secondaryBg
+        }
     )
 }
 

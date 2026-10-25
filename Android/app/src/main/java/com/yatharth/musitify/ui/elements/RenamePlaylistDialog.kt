@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -38,7 +37,7 @@ fun RenamePlaylistDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
+    MusitifyDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -116,7 +115,6 @@ fun RenamePlaylistDialog(
                     modifier = Modifier.padding(10.dp)
                 )
             }
-        },
-        containerColor = secondaryBg
+        }
     )
 }
