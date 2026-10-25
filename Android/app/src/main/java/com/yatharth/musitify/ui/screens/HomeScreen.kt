@@ -71,6 +71,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -110,6 +111,7 @@ import com.yatharth.musitify.ui.elements.display.PlaylistCarousel
 import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.background
+import com.yatharth.musitify.ui.theme.dotGridBackground
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
 import com.yatharth.musitify.ui.theme.textSecondary
@@ -225,8 +227,9 @@ fun HomeScreen(
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier
-            .fillMaxSize(),
-        containerColor = background,
+            .fillMaxSize()
+            .dotGridBackground(),
+        containerColor = Color.Transparent,
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data -> InfoToast(data.visuals.message) }
         },
@@ -247,7 +250,7 @@ fun HomeScreen(
                 // around the bar or behind the system navigation bar.
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(background)
+                    .dotGridBackground()
                     .navigationBarsPadding(),
                 uiState = uiState,
                 title = currentSong?.let { SongDisplay.title(it) },
@@ -867,7 +870,7 @@ private fun AppHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(background)
+            .dotGridBackground()
             .statusBarsPadding()
             .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically

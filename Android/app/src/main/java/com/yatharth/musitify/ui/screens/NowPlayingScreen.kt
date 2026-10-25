@@ -74,6 +74,7 @@ import com.yatharth.musitify.ui.elements.ShadowBox
 import com.yatharth.musitify.ui.theme.accentColor1
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.background
+import com.yatharth.musitify.ui.theme.dotGridBackground
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.secondaryBg
@@ -113,7 +114,7 @@ fun NowPlayingScreen(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer { translationY = dragOffset.value }
-            .background(background)
+            .dotGridBackground()
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onVerticalDrag = { change, dragAmount ->
