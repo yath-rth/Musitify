@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yatharth.musitify.data.repository.PlayerUiState
 import com.yatharth.musitify.ui.theme.cardBorder
+import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.designSystemButton
 import com.yatharth.musitify.ui.theme.designSystemShadowBox
 import com.yatharth.musitify.util.Formatter.formatTime
@@ -52,6 +53,7 @@ fun PlaybackControls(
         1 -> Icons.Outlined.RepeatOne
         else -> Icons.Outlined.Repeat
     }
+    val repeatOn = uiState.repeatMode != 0
 
     ShadowBox(
             modifier = modifier.padding(8.dp)
@@ -84,7 +86,7 @@ fun PlaybackControls(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.ArrowBackIosNew,
-                        contentDescription = null,
+                        contentDescription = "Previous song",
                         tint = cardBorder
                     )
                 }
@@ -94,7 +96,7 @@ fun PlaybackControls(
                 ) {
                     Icon(
                         imageVector = if (uiState.isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        contentDescription = null,
+                        contentDescription = if (uiState.isPlaying) "Pause" else "Play",
                         tint = cardBorder
                     )
                 }
@@ -104,28 +106,34 @@ fun PlaybackControls(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                        contentDescription = null,
+                        contentDescription = "Next song",
                         tint = cardBorder
                     )
                 }
 
                 CustomCircularButton(
                     onClick = onRepeatToggle,
+                    selected = repeatOn,
                 ) {
                     Icon(
                         imageVector = repeatIcon,
-                        contentDescription = null,
-                        tint = if (uiState.repeatMode == 0) cardBorder.copy(alpha = 0.5f) else cardBorder
+                        contentDescription = when (uiState.repeatMode) {
+                            1 -> "Repeat one, on"
+                            0 -> "Repeat, off"
+                            else -> "Repeat all, on"
+                        },
+                        tint = toggleTint(repeatOn)
                     )
                 }
 
                 CustomCircularButton(
                     onClick = onShuffleToggle,
+                    selected = uiState.shuffleMode,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Shuffle,
-                        contentDescription = null,
-                        tint = if (uiState.shuffleMode) cardBorder else cardBorder.copy(alpha = 0.5f)
+                        contentDescription = if (uiState.shuffleMode) "Shuffle, on" else "Shuffle, off",
+                        tint = toggleTint(uiState.shuffleMode)
                     )
                 }
 
@@ -134,18 +142,19 @@ fun PlaybackControls(
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Insights,
-                        contentDescription = null,
+                        contentDescription = "Listening stats",
                         tint = cardBorder
                     )
                 }
 
                 CustomCircularButton(
                     onClick = onSleepTimer,
+                    selected = sleepTimerActive,
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Bedtime,
-                        contentDescription = null,
-                        tint = if (sleepTimerActive) cardBorder else cardBorder.copy(alpha = 0.5f)
+                        contentDescription = if (sleepTimerActive) "Sleep timer, on" else "Sleep timer",
+                        tint = toggleTint(sleepTimerActive)
                     )
                 }
 
@@ -163,3 +172,6 @@ fun PlaybackControls(
         }
     }
 }
+
+/** Icon colour for a toggle: white on the filled ink background when on. */
+private fun toggleTint(on: Boolean) = if (on) itemsBg else cardBorder

@@ -106,6 +106,9 @@ fun CustomCircularButton(
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     bgColor: Color = itemsBg,
+    // Filled ink background for toggles that are on (repeat, shuffle, sleep).
+    // Callers should tint their icon itemsBg when this is true.
+    selected: Boolean = false,
     content: @Composable () -> Unit = {},
 ) {
     var pressed by remember { mutableStateOf(false) }
@@ -160,11 +163,11 @@ fun CustomCircularButton(
             Box(
                 modifier = Modifier
                     .wrapContentSize()
-                    .background(color = bgColor),
+                    .background(color = if (selected) cardBorder else bgColor),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
-                    modifier.padding(4.dp),
+                    Modifier.padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) { content() }
             }
