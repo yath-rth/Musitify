@@ -1,116 +1,129 @@
 package com.yatharth.musitify
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Pause
-import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.yatharth.musitify.ui.elements.ArtImage
-import com.yatharth.musitify.ui.elements.CustomAlertBox
-import com.yatharth.musitify.ui.elements.CustomButton
-import com.yatharth.musitify.ui.elements.CustomCircularButton
-import com.yatharth.musitify.ui.elements.CustomSwitch
-import com.yatharth.musitify.ui.elements.FillBar
-import com.yatharth.musitify.ui.elements.MusicRecord
-import com.yatharth.musitify.ui.elements.ShadowBox
-import com.yatharth.musitify.ui.elements.SortIcon
-import com.yatharth.musitify.ui.elements.SortMode
-import com.yatharth.musitify.ui.theme.MusitifyTheme
-import com.yatharth.musitify.ui.theme.accentColor1
-import com.yatharth.musitify.ui.theme.background
-import com.yatharth.musitify.ui.theme.cardBorder
+import com.yatharth.musitify.data.appModules
+import com.yatharth.musitify.data.repository.MediaControllerRepository
+import com.yatharth.musitify.engine.AudioPlayer
+import com.yatharth.musitify.engine.DownloadQueue
+import com.yatharth.musitify.platform.MediaKeys
+import com.yatharth.musitify.platform.MusitifyTray
+import com.yatharth.musitify.platform.SingleInstance
+import com.yatharth.musitify.platform.handleAppShortcut
+import com.yatharth.musitify.platform.rememberAppIcon
+import com.yatharth.musitify.service.bootstrapApp
+import com.yatharth.musitify.ui.App
+import com.yatharth.musitify.ui.elements.BackDispatcher
+import com.yatharth.musitify.ui.elements.OpenDialogs
+import com.yatharth.musitify.ui.elements.TextFieldFocusTracker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
+import org.koin.core.Koin
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import java.awt.Dimension
+import kotlin.system.exitProcess
 
-// Temporary component gallery — will be replaced by the real app shell.
-fun main() = application {
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "Musitify",
-        state = rememberWindowState(width = 1100.dp, height = 800.dp),
-    ) {
-        MusitifyTheme {
-            var playing by remember { mutableStateOf(true) }
-            var checked by remember { mutableStateOf(false) }
-            var sort by remember { mutableStateOf(SortMode.DOWNLOADED_DESC) }
-            var position by remember { mutableDoubleStateOf(70_000.0) }
-            var dontShow by remember { mutableStateOf(false) }
-            val showAlert = remember { mutableStateOf(false) }
-            var log by remember { mutableStateOf("-") }
+/**
+ * Desktop entry point (Android `MusitifyApp` + `MainActivity`):
+ * single instance → Koin → bootstrap (first-run id, player, yt-dlp update) → global media
+ * keys → tray + window. Closing the window hides it to the tray; tray "Quit" exits.
+ */
+fun main() {
+    if (!SingleInstance.acquire()) exitProcess(0) // the running instance was asked to show itself
 
-            Row(
-                Modifier.fillMaxSize().background(background).padding(24.dp),
-                horizontalArrangement = Arrangement.spacedBy(32.dp)
-            ) {
-                Column(
-                    Modifier.width(520.dp).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("COMPONENTS", style = MaterialTheme.typography.labelLarge)
-                    Text("last event: $log", style = MaterialTheme.typography.bodySmall)
-                    ShadowBox(Modifier.padding(end = 4.dp, bottom = 4.dp)) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FillBar(
-                                label = "Blinding Lights",
-                                secondaryLabel = "${(position / 60000).toInt()}:%02d / 3:20".format((position / 1000).toInt() % 60),
-                                value = position, max = 200_000.0,
-                                onSeek = { position = it * 200_000.0; log = "seek $it" }
-                            )
-                            FillBar(value = 0.0, max = 0.0, secondaryLabel = null)
-                        }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CustomCircularButton(onClick = { playing = !playing }, onLongClick = { log = "circular long/right" }) {
-                            Icon(if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, null, tint = cardBorder)
-                        }
-                        SortIcon(sort) { sort = sort.next(); log = "sort $sort" }
-                        CustomSwitch(checked) { checked = it }
-                        CustomButton(onClick = { showAlert.value = true }, onLongClick = { log = "button long/right" },
-                            bgColor = accentColor1.copy(alpha = 0.2f)) {
-                            Text("DELETE", Modifier.padding(10.dp), color = accentColor1, style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ArtImage(null, Modifier.size(64.dp))
-                        ArtImage("C:/does/not/exist.webp", Modifier.size(64.dp))
-                    }
-                }
-                ShadowBox(Modifier.width(420.dp).padding(16.dp)) {
-                    MusicRecord(artPath = null, playing = playing, imageSize = 100, modifier = Modifier.padding(16.dp))
-                }
-            }
-
-            if (showAlert.value) {
-                CustomAlertBox(
-                    showClearConfirm = showAlert,
-                    onConfirm = { log = "confirmed" },
-                    title = "Delete Song",
-                    body = "Are you sure you want to delete \"Blinding Lights\"?",
-                    yes = "Delete", no = "Cancel",
-                    dontShowAgain = dontShow,
-                    onDontShowAgainChange = { dontShow = it },
-                )
-            }
+    val koin = startKoin { modules(appModules()) }.koin
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    runBlocking {
+        try {
+            bootstrapApp(koin, appScope)
+        } catch (t: Throwable) {
+            System.err.println("Musitify: startup bootstrap failed: $t")
         }
     }
+
+    val player = koin.get<AudioPlayer>()
+    val mediaKeys = MediaKeys(player).also { it.start() }
+    val backDispatcher = BackDispatcher()
+    val focusTracker = TextFieldFocusTracker()
+
+    application {
+        var visible by remember { mutableStateOf(true) }
+        var activations by remember { mutableIntStateOf(0) }
+        val windowState = rememberWindowState(width = 1280.dp, height = 860.dp)
+
+        fun show() {
+            visible = true
+            windowState.isMinimized = false
+            activations++
+        }
+
+        fun quit() {
+            shutdown(koin, mediaKeys, appScope)
+            exitApplication()
+        }
+
+        LaunchedEffect(Unit) {
+            SingleInstance.activations.collect { show() }
+        }
+
+        MusitifyTray(
+            player = player,
+            onOpen = ::show,
+            onQuit = ::quit,
+        )
+
+        Window(
+            onCloseRequest = { visible = false }, // hide to tray instead of exiting
+            visible = visible,
+            state = windowState,
+            title = "Musitify",
+            icon = rememberAppIcon(),
+            onPreviewKeyEvent = { event ->
+                if (event.key == Key.Escape) {
+                    // An open dialog owns Escape (dismiss); otherwise Escape = Android back.
+                    !OpenDialogs.isAnyOpen && event.type == KeyEventType.KeyDown && backDispatcher.dispatch()
+                } else {
+                    handleAppShortcut(event, player, focusTracker.isTextFieldFocused)
+                }
+            },
+        ) {
+            LaunchedEffect(Unit) { window.minimumSize = Dimension(900, 650) }
+            LaunchedEffect(visible, activations) {
+                if (visible) window.toFront()
+            }
+            App(backDispatcher = backDispatcher, focusTracker = focusTracker)
+        }
+    }
+
+    // application {} returns after exitApplication(); JavaFX / hook threads must not keep us alive.
+    exitProcess(0)
+}
+
+/** Stops media keys, flushes listen time and releases the player, cancels downloads, closes Koin. */
+private fun shutdown(koin: Koin, mediaKeys: MediaKeys, appScope: CoroutineScope) {
+    runCatching { mediaKeys.stop() }
+    runCatching { koin.get<MediaControllerRepository>().release() }
+    runCatching { koin.get<DownloadQueue>().shutdown() }
+    // Give the last listen-time write a moment to land before the process goes away.
+    runCatching { Thread.sleep(300) }
+    appScope.cancel()
+    runCatching { SingleInstance.release() }
+    runCatching { stopKoin() }
+    runCatching { javafx.application.Platform.exit() }
 }
