@@ -102,7 +102,7 @@ fun CustomAlertBox(
                     text = no.uppercase(),
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.ExtraLight,
+                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier
                         .background(

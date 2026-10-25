@@ -118,7 +118,7 @@ fun RenamePlaylistDialog(
                     text = "CANCEL",
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.ExtraLight,
+                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
                 )

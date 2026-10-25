@@ -163,7 +163,7 @@ fun BudgetModeSelector(
                         text = mode.name.uppercase(),
                         style = typography.labelMedium,
                         color = if (isSelected) accentColor1 else text.copy(alpha = 0.4f),
-                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.ExtraLight,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Normal,
                         letterSpacing = typography.labelMedium.letterSpacing
                     )
                 }

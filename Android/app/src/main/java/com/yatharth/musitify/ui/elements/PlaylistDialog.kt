@@ -45,6 +45,7 @@ import com.yatharth.musitify.ui.theme.checkBoxColors
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.secondaryBg
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 
 @Composable
 fun PlaylistDialog(
@@ -96,7 +97,7 @@ fun PlaylistDialog(
                         text = if (isAddToExistingMode) "ADD TO EXISTING" else "CREATE NEW",
                         style = adaptiveTypography().labelSmall,
                         color = text.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.ExtraLight,
+                        fontWeight = FontWeight.Normal,
                         letterSpacing = 1.2.sp
                     )
                     CustomSwitch(
@@ -110,15 +111,15 @@ fun PlaylistDialog(
                         Text(
                             text = "NO PLAYLISTS YET - SWITCH TO CREATE NEW",
                             style = adaptiveTypography().labelSmall,
-                            color = text.copy(alpha = 0.5f),
+                            color = textSecondary,
                             letterSpacing = 1.sp
                         )
                     } else {
                         Text(
                             text = "SELECT PLAYLIST",
                             style = adaptiveTypography().labelSmall,
-                            color = text.copy(alpha = 0.6f),
-                            fontWeight = FontWeight.ExtraLight,
+                            color = textSecondary,
+                            fontWeight = FontWeight.Normal,
                             letterSpacing = 1.2.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -185,8 +186,8 @@ fun PlaylistDialog(
                 Text(
                     text = "SELECT SONGS (${selectedSongIds.size} SELECTED)",
                     style = adaptiveTypography().labelSmall,
-                    color = text.copy(alpha = 0.6f),
-                    fontWeight = FontWeight.ExtraLight,
+                    color = textSecondary,
+                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.2.sp
                 )
 
@@ -317,7 +318,7 @@ fun PlaylistDialog(
                     text = "CANCEL",
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.ExtraLight,
+                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
                 )

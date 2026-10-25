@@ -45,6 +45,7 @@ import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
 import kotlinx.coroutines.launch
 import java.io.File
@@ -207,9 +208,9 @@ fun PlaylistArt(
                 text = "${playlist.numOfSongs} songs \u2022 ${
                     Formatter.formatTimeToMinutes(playlist.playlistLength)
                 }",
-                color = text.copy(alpha = 0.6f),
+                color = textSecondary,
                 style = adaptiveTypography().labelSmall,
-                fontWeight = FontWeight.ExtraLight,
+                fontWeight = FontWeight.Normal,
                 letterSpacing = 0.5.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

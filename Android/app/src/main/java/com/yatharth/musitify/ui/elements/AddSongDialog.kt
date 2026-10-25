@@ -64,7 +64,7 @@ fun AddSongDialog(
                         text = if (isPlaylistMode) "PLAYLIST URL" else "SINGLE VIDEO URL",
                         style = adaptiveTypography().labelSmall,
                         color = text.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.ExtraLight,
+                        fontWeight = FontWeight.Normal,
                         letterSpacing = 1.2.sp
                     )
                     CustomSwitch(
@@ -142,7 +142,7 @@ fun AddSongDialog(
                     text = "CANCEL",
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.ExtraLight,
+                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
                 )

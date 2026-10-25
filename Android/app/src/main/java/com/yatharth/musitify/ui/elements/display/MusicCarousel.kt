@@ -41,6 +41,7 @@ import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import kotlinx.coroutines.launch
@@ -192,8 +193,8 @@ fun AlbumArt(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = adaptiveTypography().labelSmall,
-                color = text.copy(alpha = 0.6f),
-                fontWeight = FontWeight.ExtraLight,
+                color = textSecondary,
+                fontWeight = FontWeight.Normal,
                 letterSpacing = 0.5.sp
             )
         }

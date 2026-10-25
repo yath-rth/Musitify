@@ -52,6 +52,7 @@ import com.yatharth.musitify.ui.theme.background
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
 import java.io.File
 import java.util.Calendar
@@ -233,12 +234,12 @@ private fun HeroTotalsCard(stats: StatsSnapshot) {
             ) {
                 Text(
                     text = "${stats.totalSessions} sessions",
-                    color = text.copy(alpha = 0.6f),
+                    color = textSecondary,
                     style = adaptiveTypography().bodySmall
                 )
                 Text(
                     text = "avg ${Formatter.formatListenTime(stats.averageSessionMs)}/session",
-                    color = text.copy(alpha = 0.6f),
+                    color = textSecondary,
                     style = adaptiveTypography().bodySmall
                 )
             }
@@ -324,7 +325,7 @@ private fun InsightCard(
                     text = label,
                     color = text.copy(alpha = 0.7f),
                     style = adaptiveTypography().labelSmall,
-                    fontWeight = FontWeight.ExtraLight,
+                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.sp
                 )
                 Text(
@@ -344,7 +345,7 @@ private fun InsightCard(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = sub,
-                color = text.copy(alpha = 0.5f),
+                color = textSecondary,
                 style = adaptiveTypography().labelSmall
             )
         }
@@ -368,7 +369,7 @@ private fun PeriodCard(
                 text = label,
                 color = text.copy(alpha = 0.7f),
                 style = adaptiveTypography().labelSmall,
-                fontWeight = FontWeight.ExtraLight,
+                fontWeight = FontWeight.Normal,
                 letterSpacing = 1.sp
             )
             Spacer(Modifier.height(4.dp))
@@ -392,7 +393,7 @@ private fun PeriodCard(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = it,
-                    color = text.copy(alpha = 0.5f),
+                    color = textSecondary,
                     style = adaptiveTypography().labelSmall
                 )
             }
@@ -454,7 +455,7 @@ private fun ListeningBarChart(series: List<DailyStat>) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = Formatter.formatDayNumber(dayOfMonth(day.dayStartMs)),
-                    color = text.copy(alpha = 0.5f),
+                    color = textSecondary,
                     style = adaptiveTypography().labelSmall,
                     fontSize = 9.sp
                 )
@@ -486,7 +487,7 @@ private fun TopListCard(
             Spacer(Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = text.copy(alpha = 0.6f),
+                color = textSecondary,
                 style = adaptiveTypography().bodySmall
             )
             Spacer(Modifier.height(12.dp))
@@ -495,7 +496,7 @@ private fun TopListCard(
             else {
                 Text(
                     text = emptyLabel,
-                    color = text.copy(alpha = 0.5f),
+                    color = textSecondary,
                     style = adaptiveTypography().bodySmall
                 )
             }
@@ -601,7 +602,7 @@ private fun StatRowBase(
     ) {
         Text(
             text = "${rank + 1}",
-            color = text.copy(alpha = 0.5f),
+            color = textSecondary,
             style = adaptiveTypography().labelLarge,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.width(28.dp)
@@ -622,7 +623,7 @@ private fun StatRowBase(
             )
             Text(
                 text = subtitle,
-                color = text.copy(alpha = 0.6f),
+                color = textSecondary,
                 style = adaptiveTypography().labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

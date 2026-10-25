@@ -87,6 +87,7 @@ import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.background
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import java.io.File
@@ -813,7 +814,7 @@ private fun DownloadJobRow(
     }
 
     val statusColor =
-        if (job.status == DownloadStatus.FAILED) text else text.copy(alpha = 0.6f)
+        if (job.status == DownloadStatus.FAILED) text else textSecondary
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -906,7 +907,7 @@ private fun LibrarySearchBar(
             Text(
                 text = placeholder,
                 style = adaptiveTypography().bodyMedium,
-                color = text.copy(alpha = 0.5f)
+                color = textSecondary
             )
         },
         leadingIcon = {
@@ -967,7 +968,7 @@ private fun SongListRow(
             )
             Text(
                 text = "${Formatter.formatTime(song.length)} · ${playCountOf(song)} plays",
-                color = text.copy(alpha = 0.6f),
+                color = textSecondary,
                 style = adaptiveTypography().labelSmall
             )
         }
@@ -1018,7 +1019,7 @@ private fun PlaylistListRow(
             )
             Text(
                 text = "${playlist.numOfSongs} songs",
-                color = text.copy(alpha = 0.6f),
+                color = textSecondary,
                 style = adaptiveTypography().labelSmall
             )
         }

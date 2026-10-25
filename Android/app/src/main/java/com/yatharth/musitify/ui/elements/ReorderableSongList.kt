@@ -38,6 +38,7 @@ import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import java.io.File
@@ -168,7 +169,7 @@ private fun ReorderableSongRow(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "${Formatter.formatTime(song.length)} · ${playCountOf(song)} plays",
-                    color = text.copy(alpha = 0.6f),
+                    color = textSecondary,
                     style = adaptiveTypography().labelSmall,
                     letterSpacing = 0.5.sp
                 )

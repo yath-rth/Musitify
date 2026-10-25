@@ -82,7 +82,7 @@ fun FillBar(
                     text = secondaryLabel,
                     color = text.copy(alpha = 0.7f),
                     style = adaptiveTypography().labelSmall,
-                    fontWeight = FontWeight.ExtraLight,
+                    fontWeight = FontWeight.Normal,
                     letterSpacing = 0.5.sp
                 )
             }
