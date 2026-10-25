@@ -1,21 +1,29 @@
 package com.yatharth.musitify.ui.elements
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.yatharth.musitify.ui.theme.adaptiveTypography
+import com.yatharth.musitify.ui.theme.cardBorder
+import com.yatharth.musitify.ui.theme.text
 
-enum class SortMode {
-    DOWNLOADED_DESC, DOWNLOADED_ASC, PLAYS_DESC, PLAYS_ASC;
+enum class SortMode(val label: String) {
+    DOWNLOADED_DESC("NEWEST"),
+    DOWNLOADED_ASC("OLDEST"),
+    PLAYS_DESC("MOST PLAYED"),
+    PLAYS_ASC("LEAST PLAYED");
 
     fun next(): SortMode {
         val values = entries
@@ -23,23 +31,35 @@ enum class SortMode {
     }
 }
 
+/**
+ * Sort button that says the current order in words. The old icon pair
+ * (headphones + arrow for "plays") had to be learned.
+ */
 @Composable
 fun SortIcon(mode: SortMode, onClick: () -> Unit) {
-    val (fieldIcon, arrowIcon) = when (mode) {
-        SortMode.DOWNLOADED_DESC -> Icons.Default.Schedule to Icons.Default.ArrowDownward
-        SortMode.DOWNLOADED_ASC -> Icons.Default.Schedule to Icons.Default.ArrowUpward
-        SortMode.PLAYS_DESC -> Icons.Default.Headphones to Icons.Default.ArrowDownward
-        SortMode.PLAYS_ASC -> Icons.Default.Headphones to Icons.Default.ArrowUpward
-    }
-
-    CustomCircularButton(
-        onClick = onClick
+    CustomButton(
+        onClick = onClick,
+        modifier = Modifier.semantics {
+            contentDescription = "Sorted by ${mode.label.lowercase()}. Tap to change."
+        }
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically
-        ){
-            Icon(fieldIcon, contentDescription = "Sort field", modifier = Modifier.size(18.dp))
-            Icon(arrowIcon, contentDescription = "Sort direction", modifier = Modifier.size(14.dp))
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Sort,
+                contentDescription = null,
+                tint = cardBorder,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = mode.label,
+                color = text,
+                style = adaptiveTypography().labelSmall,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }

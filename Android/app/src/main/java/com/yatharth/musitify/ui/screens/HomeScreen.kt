@@ -387,18 +387,15 @@ fun HomeScreen(
 
                             isReorderMode -> {
                                 Text(
-                                    text = "USE ARROWS TO REORDER SONGS",
-                                    color = accentColor2,
-                                    style = adaptiveTypography().labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp,
+                                    text = "Drag the handles to reorder",
+                                    color = textSecondary,
+                                    style = adaptiveTypography().bodySmall,
                                     modifier = Modifier
                                         .padding(horizontal = 16.dp, vertical = 8.dp)
                                 )
                                 ReorderableSongList(
                                     songs = songsInPlaylist,
-                                    currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id }
-                                        .coerceAtLeast(0),
+                                    currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id },
                                     onTrackSelected = { index ->
                                         playbackControllerViewModel.playSongs(songsInPlaylist, index, playlistId)
                                     },
@@ -434,7 +431,6 @@ fun HomeScreen(
                 item(key = "songs_header") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -444,6 +440,7 @@ fun HomeScreen(
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 2.sp,
                             modifier = Modifier
+                                .weight(1f)
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         )
 
