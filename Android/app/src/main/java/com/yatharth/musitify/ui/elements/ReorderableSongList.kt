@@ -168,7 +168,7 @@ private fun ReorderableSongRow(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${Formatter.formatTime(song.length)} · ${playCountOf(song)} plays",
+                    text = "${Formatter.formatTime(song.length)} · ${Formatter.count(playCountOf(song), "play")}",
                     color = textSecondary,
                     style = adaptiveTypography().labelSmall,
                     letterSpacing = 0.5.sp

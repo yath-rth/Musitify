@@ -205,7 +205,7 @@ fun PlaylistArt(
             )
 
             Text(
-                text = "${playlist.numOfSongs} songs \u2022 ${
+                text = "${Formatter.count(playlist.numOfSongs, "song")} \u2022 ${
                     Formatter.formatTimeToMinutes(playlist.playlistLength)
                 }",
                 color = textSecondary,

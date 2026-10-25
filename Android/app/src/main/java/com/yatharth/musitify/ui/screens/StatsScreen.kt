@@ -233,7 +233,7 @@ private fun HeroTotalsCard(stats: StatsSnapshot) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${stats.totalSessions} sessions",
+                    text = Formatter.count(stats.totalSessions, "session"),
                     color = textSecondary,
                     style = adaptiveTypography().bodySmall
                 )
@@ -282,7 +282,7 @@ private fun PeriodCardsRow(stats: StatsSnapshot) {
             modifier = Modifier.weight(1f),
             label = "TODAY",
             value = Formatter.formatListenTime(stats.todayListenMs),
-            sub = if (stats.listensToday > 0) "${stats.listensToday} sessions" else "no listens",
+            sub = if (stats.listensToday > 0) Formatter.count(stats.listensToday, "session") else "no listens",
             color = accentColor1
         )
         PeriodCard(
@@ -296,7 +296,7 @@ private fun PeriodCardsRow(stats: StatsSnapshot) {
             modifier = Modifier.weight(1f),
             label = "THIS MONTH",
             value = Formatter.formatListenTime(stats.thisMonthListenMs),
-            sub = "${stats.listensThisMonth} sessions",
+            sub = Formatter.count(stats.listensThisMonth, "session"),
             color = accentColor3
         )
     }
@@ -510,7 +510,7 @@ private fun SongStatRow(index: Int, song: SongStat, maxMs: Long) {
         rank = index,
         title = song.name,
         subtitle = song.artistName,
-        valueLabel = "${Formatter.formatListenTime(song.totalMs)} · ${song.fullPlays} plays",
+        valueLabel = "${Formatter.formatListenTime(song.totalMs)} · ${Formatter.count(song.fullPlays, "play")}",
         shareValue = song.totalMs.toDouble(),
         shareMax = if (maxMs > 0) maxMs.toDouble() else 1.0,
         color = accentColor1
@@ -532,7 +532,7 @@ private fun ArtistStatRow(index: Int, artist: ArtistStat, maxMs: Long) {
     StatRowBase(
         rank = index,
         title = artist.name,
-        subtitle = "${artist.songCount} songs",
+        subtitle = Formatter.count(artist.songCount, "song"),
         valueLabel = Formatter.formatListenTime(artist.totalMs),
         shareValue = artist.totalMs.toDouble(),
         shareMax = if (maxMs > 0) maxMs.toDouble() else 1.0,
@@ -560,7 +560,7 @@ private fun PlaylistStatRow(index: Int, playlist: PlaylistStat, maxMs: Long) {
     StatRowBase(
         rank = index,
         title = playlist.name,
-        subtitle = "${playlist.sessionCount} sessions",
+        subtitle = Formatter.count(playlist.sessionCount, "session"),
         valueLabel = Formatter.formatListenTime(playlist.totalMs),
         shareValue = playlist.totalMs.toDouble(),
         shareMax = if (maxMs > 0) maxMs.toDouble() else 1.0,

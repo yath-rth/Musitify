@@ -967,7 +967,7 @@ private fun SongListRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${Formatter.formatTime(song.length)} · ${playCountOf(song)} plays",
+                text = "${Formatter.formatTime(song.length)} · ${Formatter.count(playCountOf(song), "play")}",
                 color = textSecondary,
                 style = adaptiveTypography().labelSmall
             )
@@ -1018,7 +1018,7 @@ private fun PlaylistListRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${playlist.numOfSongs} songs",
+                text = Formatter.count(playlist.numOfSongs, "song"),
                 color = textSecondary,
                 style = adaptiveTypography().labelSmall
             )

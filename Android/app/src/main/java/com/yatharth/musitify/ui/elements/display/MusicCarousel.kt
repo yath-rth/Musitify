@@ -189,7 +189,7 @@ fun AlbumArt(
             )
 
             Text(
-                text = Formatter.formatTime(song.length) + " \u2022 " + playCountOf(song) + " plays",
+                text = Formatter.formatTime(song.length) + " \u2022 " + Formatter.count(playCountOf(song), "play"),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = adaptiveTypography().labelSmall,
