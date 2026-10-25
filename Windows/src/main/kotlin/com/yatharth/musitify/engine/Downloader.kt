@@ -224,13 +224,38 @@ class Downloader(
 
         /** Fixed Android fallback chain: artist → artists → uploader → "Unknown Artist". Never "None". */
         fun artistOf(info: JsonObject): String {
-            info.str("artist")?.takeIf { it.isNotBlank() }?.let { return it }
+            info.str("artist")?.takeIf { it.isNotBlank() }?.let { return cleanArtist(it) }
             (info["artists"] as? JsonArray)
-                ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.takeIf { s -> s.isNotBlank() } }
+                ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { s -> s.isNotBlank() } }
                 ?.takeIf { it.isNotEmpty() }
                 ?.let { return it.joinToString(", ") }
-            info.str("uploader")?.takeIf { it.isNotBlank() }?.let { return it }
+            info.str("uploader")?.takeIf { it.isNotBlank() }?.let { return cleanArtist(it) }
             return "Unknown Artist"
+        }
+
+        private val TOPIC = Regex("""\s+-\s+topic$""", RegexOption.IGNORE_CASE)
+        private val VEVO = Regex("""\s*vevo$""", RegexOption.IGNORE_CASE)
+        private val OFFICIAL_SUFFIX =
+            Regex("""\s*[-|–]?\s*\(?\bofficial(?:\s+artist)?(?:\s+channel)?\)?$""", RegexOption.IGNORE_CASE)
+        private val OFFICIAL_PREFIX = Regex("""^official\s+""", RegexOption.IGNORE_CASE)
+        private val CAMEL = Regex("""(?<=[a-z])(?=[A-Z])""")
+
+        /** Strips channel noise: "X - Topic", "XVEVO", "X Official", "Official X". Same rules as Android's downloader.py. */
+        fun cleanArtist(name: String): String {
+            val original = name.trim()
+            var s = original
+            while (true) {
+                val before = s
+                s = TOPIC.replace(s, "").trim()
+                if (VEVO.containsMatchIn(s)) {
+                    s = VEVO.replace(s, "").trim()
+                    if (' ' !in s) s = CAMEL.replace(s, " ") // DaftPunkVEVO -> Daft Punk
+                }
+                s = OFFICIAL_SUFFIX.replace(s, "").trim()
+                s = OFFICIAL_PREFIX.replace(s, "").trim()
+                if (s == before) break
+            }
+            return s.ifEmpty { original }
         }
 
         internal fun audioPathOf(info: JsonObject): String? {
