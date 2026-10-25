@@ -221,7 +221,12 @@ private fun FieldLabel(label: String) {
 
 /** Text field in the outlined-card style used across the app's forms. */
 @Composable
-internal fun OutlinedInput(value: String, onValueChange: (String) -> Unit, placeholder: String) {
+internal fun OutlinedInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    leadingIcon: (@Composable () -> Unit)? = null,
+) {
     val shape = RoundedCornerShape(5.dp)
     Box(modifier = Modifier
         .fillMaxWidth()
@@ -243,6 +248,7 @@ internal fun OutlinedInput(value: String, onValueChange: (String) -> Unit, place
                 Text(placeholder, style = adaptiveTypography().bodyMedium, color = textSecondary)
             },
             singleLine = true,
+            leadingIcon = leadingIcon,
             textStyle = adaptiveTypography().bodyMedium,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = text,

@@ -17,6 +17,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
 import com.yatharth.musitify.ui.theme.primaryAction
 import com.yatharth.musitify.ui.elements.CustomButton
+import com.yatharth.musitify.ui.elements.OutlinedInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.foundation.selection.selectableGroup
@@ -1272,28 +1273,17 @@ private fun LibrarySearchBar(
     placeholder: String,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = {
-            Text(
-                text = placeholder,
-                style = adaptiveTypography().bodyMedium,
-                color = textSecondary
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Outlined.Search,
-                contentDescription = null,
-                tint = cardBorder
-            )
-        },
-        singleLine = true,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    )
+    // Tracknix input: outlined card with a hard shadow, not a Material field.
+    Box(modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+        OutlinedInput(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = placeholder,
+            leadingIcon = {
+                Icon(imageVector = Icons.Outlined.Search, contentDescription = null, tint = cardBorder)
+            }
+        )
+    }
 }
 
 /** Shown in place of the list when a search matches nothing. */

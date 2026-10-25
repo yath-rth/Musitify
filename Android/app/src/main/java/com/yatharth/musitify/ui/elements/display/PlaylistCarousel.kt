@@ -134,13 +134,16 @@ fun PlaylistArt(
 ) {
     ShadowBox(
         modifier = modifier,
-        shadowOffsetX = 0.dp,
-        shadowOffsetY = 0.dp,
-        borderThickness = 6.dp,
+        shadowOffsetX = 4.dp,
+        shadowOffsetY = 4.dp,
+        borderThickness = 2.dp,
         rounding = 5
     ) {
+        // Fill the fixed card frame so the hard shadow lines up with the card.
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
         ) {
             playlist.playlist.artPath?.let {
                 AsyncImage(

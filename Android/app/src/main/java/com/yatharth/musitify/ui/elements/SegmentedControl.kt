@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.yatharth.musitify.ui.theme.accentColor1
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.itemsBg
@@ -28,7 +29,7 @@ import com.yatharth.musitify.ui.theme.text
  * Pick one of a few options, with every option visible and labelled.
  * Replaces switches whose label changed to describe the current state
  * ("CREATE NEW" / "ADD TO EXISTING"), which made it unclear what the switch
- * did. The selected option uses the same filled-ink style as other "on" states.
+ * did. Styled per the Tracknix segmented control: tinted selected segment.
  */
 @Composable
 fun SegmentedControl(
@@ -36,6 +37,7 @@ fun SegmentedControl(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    selectedColor: Color = accentColor1,
 ) {
     val shape = RoundedCornerShape(4.dp)
     Box(modifier = modifier.padding(end = 3.dp, bottom = 3.dp)) {
@@ -58,7 +60,11 @@ fun SegmentedControl(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .background(if (selected) cardBorder else Color.Transparent)
+                        .background(if (selected) selectedColor.copy(alpha = 0.12f) else Color.Transparent)
+                        .then(
+                            if (index > 0) Modifier.border(2.dp, cardBorder, RoundedCornerShape(0.dp))
+                            else Modifier
+                        )
                         .selectable(
                             selected = selected,
                             role = Role.RadioButton,
@@ -70,8 +76,8 @@ fun SegmentedControl(
                     Text(
                         text = option,
                         style = adaptiveTypography().labelMedium,
-                        color = if (selected) itemsBg else text,
-                        fontWeight = FontWeight.ExtraBold,
+                        color = if (selected) selectedColor else text.copy(alpha = 0.4f),
+                        fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.ExtraLight,
                         maxLines = 1
                     )
                 }
