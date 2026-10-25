@@ -56,7 +56,7 @@ fun SleepTimerDialog(
                     Text(
                         text = "Timer Active",
                         style = adaptiveTypography().bodyMedium,
-                        color = accentColor1,
+                        color = text,
                         fontWeight = FontWeight.Bold
                     )
 
@@ -165,12 +165,11 @@ fun SleepTimerDialog(
         confirmButton = {
             CustomButton(
                 onClick = onDismiss,
-                bgColor = accentColor1.copy(alpha = 0.2f)
             ) {
                 Text(
                     text = "CLOSE",
                     style = adaptiveTypography().labelMedium,
-                    color = accentColor1,
+                    color = text,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier

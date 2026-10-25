@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yatharth.musitify.data.viewmodel.AddSongsUiState
 import com.yatharth.musitify.ui.theme.accentColor1
+import com.yatharth.musitify.ui.theme.primaryAction
 import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.cardBorder
@@ -123,12 +124,12 @@ fun AddSongDialog(
         confirmButton = {
             CustomButton(
                 onClick = onSubmit,
-                bgColor = accentColor1.copy(alpha = 0.2f)
+                bgColor = primaryAction.copy(alpha = 0.2f)
             ) {
                 Text(
                     text = "ADD TO QUEUE",
                     style = adaptiveTypography().labelMedium,
-                    color = accentColor1,
+                    color = primaryAction,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)

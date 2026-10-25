@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.ui.theme.accentColor1
+import com.yatharth.musitify.ui.theme.primaryAction
 import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.cardBorder
@@ -99,12 +100,12 @@ fun RenamePlaylistDialog(
         confirmButton = {
             CustomButton(
                 onClick = onConfirm,
-                bgColor = accentColor1.copy(alpha = 0.2f)
+                bgColor = primaryAction.copy(alpha = 0.2f)
             ) {
                 Text(
                     text = "RENAME",
                     style = adaptiveTypography().labelMedium,
-                    color = accentColor1,
+                    color = primaryAction,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
