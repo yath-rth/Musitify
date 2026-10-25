@@ -249,6 +249,59 @@ class ActionControllerTest {
         }
     }
 
+    private fun redPng(name: String): String {
+        val img = java.awt.image.BufferedImage(8, 8, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        for (x in 0 until 8) for (y in 0 until 8) img.setRGB(x, y, 0xFF0000)
+        val f = dir.resolve("$name.png")
+        javax.imageio.ImageIO.write(img, "png", f)
+        return f.absolutePath
+    }
+
+    @Test
+    fun pullGeneratesAndRefreshesPlaylistCovers() = runBlocking {
+        val a = addSong("a", "https://y/a")
+        val b = addSong("b", "https://y/b")
+        db.songDao().updateSong(a.copy(artPath = redPng("a")))
+        db.songDao().updateSong(b.copy(artPath = redPng("b")))
+        val playlistUuid = UUID.randomUUID().toString()
+
+        server.enqueue(ok("""{"actions":[""" + listOf(
+            action(1, ActionType.PLAYLIST_CREATED, playlist = playlistUuid, payload = """{"name":"Synced"}"""),
+            action(2, ActionType.SONG_ADDED_TO_PLAYLIST, song = a.uuid.toString(), playlist = playlistUuid),
+        ).joinToString(",") + "]}"))
+        controller.pullActions()
+
+        val playlist = db.playlistDao().getPlaylistByUuid(playlistUuid)!!
+        val cover = File(playlist.artPath!!)
+        assertTrue(cover.isFile, "synced playlist gets a cover")
+        val first = cover.readBytes()
+
+        // A later pull that adds a song re-renders the existing cover.
+        server.enqueue(ok("""{"actions":[""" +
+            action(3, ActionType.SONG_ADDED_TO_PLAYLIST, song = b.uuid.toString(), playlist = playlistUuid) + "]}"))
+        controller.pullActions()
+        assertTrue(!first.contentEquals(cover.readBytes()), "cover refreshed after a synced add")
+    }
+
+    @Test
+    fun pullBackfillsMissingCovers() = runBlocking {
+        val song = addSong("a", "https://y/a")
+        db.songDao().updateSong(song.copy(artPath = redPng("a")))
+        val playlist = addPlaylist("Old sync")
+        db.songToPlaylistDao().addSongToPlaylistIfAbsent(
+            com.yatharth.musitify.data.entity.SongToPlaylist(
+                songId = song.id, playListId = playlist.id, position = 0, addedOn = 1,
+                song_uuid = song.uuid, playlist_uuid = playlist.uuid
+            )
+        )
+
+        server.enqueue(ok("""{"actions":[]}"""))
+        controller.pullActions()
+
+        val art = db.playlistDao().getPlaylistById(playlist.id)!!.artPath
+        assertTrue(art != null && File(art).isFile, "existing playlist without a cover gets one")
+    }
+
     private companion object {
         const val DEVICE = "dev-1"
     }
