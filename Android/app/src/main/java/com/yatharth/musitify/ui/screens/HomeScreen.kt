@@ -3,6 +3,8 @@ package com.yatharth.musitify.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.collection.CircularArray
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -47,6 +49,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,6 +117,7 @@ fun HomeScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var showSleepTimerDialog by remember { mutableStateOf(false) }
+    var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var url by remember { mutableStateOf("") }
     var isPlaylistMode by remember { mutableStateOf(false) }
     var isListMode by remember { mutableStateOf(false) }
@@ -172,6 +176,15 @@ fun HomeScreen(
         homeScreenViewModel.clearSelectedPlaylist()
     }
 
+    // Prefer the id; fall back to the title for tracks queued before ids were tracked.
+    val currentSong: Song? = allSongs.firstOrNull { it.id == uiState.currentSongId }
+        ?: allSongs.firstOrNull { it.name == uiState.currentTitle }
+    val hasTrack = uiState.currentTitle != null
+
+    // Declared after the playlist handler so it wins while the player is open.
+    BackHandler(enabled = showNowPlaying) { showNowPlaying = false }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier
             .fillMaxSize(),
@@ -209,7 +222,8 @@ fun HomeScreen(
                     createPlaylist = { showPlaylistDialog = true },
                     onStats = onOpenStats,
                     onSleepTimer = { showSleepTimerDialog = true },
-                    sleepTimerActive = sleepTimerState.isActive
+                    sleepTimerActive = sleepTimerState.isActive,
+                    onOpenNowPlaying = if (hasTrack) ({ showNowPlaying = true }) else null
                 )
             }
         }
@@ -451,16 +465,6 @@ fun HomeScreen(
                 }
             }
 
-            item {
-                uiState.currentTitle?.let {
-                    PlaybackScreen(
-                        modifier = Modifier.fillMaxWidth(),
-                        song = allSongs[allSongs.indexOfFirst { song -> song.name == it }
-                            .coerceAtLeast(0)],
-                        playing = uiState.isPlaying
-                    )
-                }
-            }
         }
 
         if (showAddDialog) {
@@ -728,6 +732,27 @@ fun HomeScreen(
                 }
             )
         }
+    }
+
+    AnimatedVisibility(
+        visible = showNowPlaying && hasTrack,
+        enter = slideInVertically(initialOffsetY = { it }),
+        exit = slideOutVertically(targetOffsetY = { it })
+    ) {
+        NowPlayingScreen(
+            song = currentSong,
+            uiState = uiState,
+            sleepTimerState = sleepTimerState,
+            onClose = { showNowPlaying = false },
+            onPlayPause = { playbackControllerViewModel.pause() },
+            onPrevious = { playbackControllerViewModel.previous() },
+            onNext = { playbackControllerViewModel.next() },
+            onSeek = { playbackControllerViewModel.seekTo(it) },
+            onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
+            onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
+            onSleepTimer = { showSleepTimerDialog = true }
+        )
+    }
     }
 }
 

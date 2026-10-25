@@ -1,6 +1,7 @@
 package com.yatharth.musitify.ui.elements
 
 import android.util.Log
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.outlined.ArrowBackIosNew
 import androidx.compose.material.icons.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Repeat
@@ -45,7 +47,9 @@ fun PlaybackControls(
     onShuffleToggle: () -> Unit,
     onStats: () -> Unit = {},
     onSleepTimer: () -> Unit = {},
-    sleepTimerActive: Boolean = false
+    sleepTimerActive: Boolean = false,
+    // Opens the full-screen player. Null while nothing is loaded.
+    onOpenNowPlaying: (() -> Unit)? = null
 ) {
 
     val repeatIcon = when (uiState.repeatMode) {
@@ -63,8 +67,20 @@ fun PlaybackControls(
             verticalArrangement = Arrangement.spacedBy(2.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (onOpenNowPlaying != null)
+                            Modifier.clickable(onClickLabel = "Open player", onClick = onOpenNowPlaying)
+                        else Modifier
+                    )
+            ) {
             FillBar(
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
                 label = uiState.currentTitle,
                 value = uiState.positionMs.toDouble(),
                 max = uiState.durationMs.toDouble(),
@@ -76,6 +92,15 @@ fun PlaybackControls(
                     }"
                 else null
             )
+                if (onOpenNowPlaying != null) {
+                    Icon(
+                        imageVector = Icons.Outlined.KeyboardArrowUp,
+                        contentDescription = null,
+                        tint = cardBorder,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
+            }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
