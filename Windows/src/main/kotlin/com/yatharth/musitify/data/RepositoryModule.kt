@@ -12,11 +12,13 @@ import com.yatharth.musitify.data.repository.SyncGateway
 import com.yatharth.musitify.data.viewmodel.AddSongsViewModel
 import com.yatharth.musitify.data.viewmodel.HomeScreenViewModel
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
+import com.yatharth.musitify.data.viewmodel.SettingsViewModel
 import com.yatharth.musitify.data.viewmodel.StatsViewModel
 import com.yatharth.musitify.engine.AudioPlayer
 import com.yatharth.musitify.engine.DownloadLibrary
 import com.yatharth.musitify.engine.EnginePaths
 import com.yatharth.musitify.engine.engineModule
+import com.yatharth.musitify.network.syncModule
 import com.yatharth.musitify.platform.AppPaths
 import com.yatharth.musitify.service.IdManager
 import org.koin.core.module.Module
@@ -44,14 +46,15 @@ val repositoryModule = module {
     viewModelOf(::HomeScreenViewModel)
     viewModelOf(::PlaybackControllerViewModel)
     viewModelOf(::StatsViewModel)
+    viewModelOf(::SettingsViewModel)
 }
 
 /** Engine paths for the app: songs in [AppPaths.musicDir], covers in [AppPaths.coversDir]. */
 fun appEnginePaths(): EnginePaths = EnginePaths(
-    songsDir = AppPaths.musicDir,
+    songsDirProvider = { AppPaths.musicDir },
     engineDataDir = File(AppPaths.dataDir, "engine"),
     playlistCoversDir = AppPaths.coversDir,
 )
 
 /** Every Koin module the app needs: `startKoin { modules(appModules()) }`. */
-fun appModules(): List<Module> = listOf(dataModule, engineModule(appEnginePaths()), repositoryModule)
+fun appModules(): List<Module> = listOf(dataModule, engineModule(appEnginePaths()), repositoryModule, syncModule)

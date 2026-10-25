@@ -61,6 +61,7 @@ dependencies {
     implementation("com.github.kwhat:jnativehook:2.2.2")
 
     testImplementation(kotlin("test"))
+    testImplementation("com.squareup.okhttp3:mockwebserver3:5.4.0")
 }
 
 // ---------------------------------------------------------------------------

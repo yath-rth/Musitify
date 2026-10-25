@@ -10,11 +10,17 @@ import java.io.File
  * external files dir), engine state in `%LOCALAPPDATA%\Musitify\engine`, playlist covers in
  * `%APPDATA%\Musitify\playlist_covers`.
  */
-data class EnginePaths(
-    val songsDir: File,
+class EnginePaths(
+    private val songsDirProvider: () -> File,
     val engineDataDir: File,
     val playlistCoversDir: File,
 ) {
+    constructor(songsDir: File, engineDataDir: File, playlistCoversDir: File) :
+        this({ songsDir }, engineDataDir, playlistCoversDir)
+
+    /** Re-read on every access so a changed music folder applies without a restart. */
+    val songsDir: File get() = songsDirProvider()
+
     fun playlistCover(playlistId: Long): File = File(playlistCoversDir, "playlist_$playlistId.png")
 
     companion object {
