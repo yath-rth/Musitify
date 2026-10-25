@@ -45,6 +45,15 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // One-time artist repair; no-op once it has completed.
+        lifecycleScope.launch {
+            try {
+                legacyFixer.fixArtists()
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Artist fix failed", e)
+            }
+        }
+
 //        lifecycleScope.launch {
 //            playlistRepository.downloadPlaylist(
 //                playlistUrl = "https://youtube.com/playlist?list=PLE6nDyTGs1nw&si=K6fr7dNUDKDeWwkt",

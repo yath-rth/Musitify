@@ -1,6 +1,7 @@
 import yt_dlp
 import time
 
+import ast
 import json
 import os
 import re
@@ -42,6 +43,34 @@ def pick_artist(info):
     if isinstance(uploader, str) and uploader.strip():
         return clean_artist(uploader)
     return "Unknown Artist"
+
+
+_BROKEN_ARTISTS = {"", "none", "null", "unknown"}
+
+
+def fix_artist(stored, url):
+    """One-time repair of an already stored artist (see LegacyFixer.fixArtists).
+
+    - "['A', 'B']" (old str(list) bug) -> "A, B", no network needed
+    - "None" / "null" / "unknown" / "" -> re-read from YouTube (raises if that fails)
+    - anything else -> channel noise cleaned
+    """
+    s = (stored or "").strip()
+    if s.startswith("["):
+        try:
+            names = [str(a).strip() for a in ast.literal_eval(s) if str(a).strip()]
+            if names:
+                return ", ".join(names)
+        except (ValueError, SyntaxError):
+            pass
+    if s.lower() in _BROKEN_ARTISTS or s.startswith("["):
+        if not url or not url.startswith("http"):
+            return "Unknown Artist"
+        opts = {"quiet": True, "no_warnings": True, "skip_download": True, "noplaylist": True}
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        return pick_artist(info)
+    return clean_artist(s)
 
 
 def downloadSong(url, output_path, retries=3, delay=3):
