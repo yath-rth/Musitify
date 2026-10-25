@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * Tracknix page background: [bg] with 1.5dp dots of [text] at 18% alpha on a
+ * Tracknix page background: [bg] with 1.5dp dots of [text] at 10% alpha on a
  * 20dp grid. Only for page-level surfaces (scaffold, bars, full-screen
  * sheets); cards and controls stay solid itemsBg so they sit on top of it.
  *
@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
  */
 fun Modifier.dotGridBackground(
     bg: Color = background,
-    dot: Color = text.copy(alpha = 0.18f),
+    dot: Color = text.copy(alpha = 0.10f),
     spacing: Dp = 20.dp,
     radius: Dp = 1.5.dp,
 ): Modifier = composed {
