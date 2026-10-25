@@ -59,8 +59,7 @@ fun AddSongDialog(
                 Text(
                     text = "YOUTUBE LINK",
                     style = adaptiveTypography().labelSmall,
-                    color = textSecondary,
-                    fontWeight = FontWeight.Normal
+                    color = textSecondary
                 )
 
                 // Tracknix input field pattern: card with shadow offset
@@ -143,7 +142,6 @@ fun AddSongDialog(
                     text = "CANCEL",
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
                 )

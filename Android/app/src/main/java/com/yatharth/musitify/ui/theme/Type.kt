@@ -111,22 +111,21 @@ fun adaptiveTypography(): Typography {
         // pairs beautifully against ExtraBold values in the same card.
 
         // Tiny caps label — "HIGHEST SPEND", "SPENT", category tags
-        // Regular, not ExtraLight: thin 10sp text at low contrast was unreadable.
         labelSmall = TextStyle(
             fontFamily = JetBrainsMonoNL,
-            fontWeight = FontWeight.Normal,
-            fontSize = adaptiveSp(11f),
+            fontWeight = FontWeight.ExtraLight,
+            fontSize = adaptiveSp(10f),
             lineHeight = adaptiveSp(16f),
-            letterSpacing = 0.6.sp
+            letterSpacing = 1.5.sp      // wide tracking for all-caps labels
         ),
 
         // Medium label — section headers, tab labels
         labelMedium = TextStyle(
             fontFamily = JetBrainsMonoNL,
-            fontWeight = FontWeight.Normal,
+            fontWeight = FontWeight.ExtraLight,
             fontSize = adaptiveSp(12f),
             lineHeight = adaptiveSp(18f),
-            letterSpacing = 1.0.sp
+            letterSpacing = 1.2.sp
         ),
 
         // Large label — screen-level headings like "INSIGHTS", "TRANSACTIONS"

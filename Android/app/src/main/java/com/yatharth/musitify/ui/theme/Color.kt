@@ -19,8 +19,8 @@ val accentColor3 = Color(0xFFE7C277)
 // green = the main action, red = destructive or error only.
 val primaryAction = accentColor2
 val danger = accentColor1
-// Secondary text (metadata, captions). Dark enough to pass 4.5:1 on itemsBg and background.
-val textSecondary = Color(0xFF4A4A5E)
+// Secondary text (metadata, captions, hints): Tracknix uses text at 70%.
+val textSecondary = text.copy(alpha = 0.7f)
 
 val categoryColors = mapOf(
     "Food"          to Color(0xFF1B1B38), // Navy

@@ -170,7 +170,6 @@ fun PlaylistArt(
                 }",
                 color = textSecondary,
                 style = adaptiveTypography().labelSmall,
-                fontWeight = FontWeight.Normal,
                 letterSpacing = 0.5.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

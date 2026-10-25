@@ -108,7 +108,6 @@ fun AddToPlaylistDialog(
                             text = "CHOOSE ONE",
                             style = adaptiveTypography().labelSmall,
                             color = textSecondary,
-                            fontWeight = FontWeight.Normal,
                             letterSpacing = 1.2.sp
                         )
                         LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
@@ -241,7 +240,6 @@ fun AddToPlaylistDialog(
                     text = "CANCEL",
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
                 )

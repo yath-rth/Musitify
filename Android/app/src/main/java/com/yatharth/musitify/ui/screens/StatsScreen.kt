@@ -403,7 +403,6 @@ private fun InsightCard(
                     text = label,
                     color = text.copy(alpha = 0.7f),
                     style = adaptiveTypography().labelSmall,
-                    fontWeight = FontWeight.Normal,
                     letterSpacing = 1.sp
                 )
                 if (icon.isNotEmpty()) {
@@ -449,7 +448,6 @@ private fun PeriodCard(
                 text = label,
                 color = text.copy(alpha = 0.7f),
                 style = adaptiveTypography().labelSmall,
-                fontWeight = FontWeight.Normal,
                 letterSpacing = 1.sp
             )
             Spacer(Modifier.height(4.dp))

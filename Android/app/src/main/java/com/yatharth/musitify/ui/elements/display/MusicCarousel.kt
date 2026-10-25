@@ -204,7 +204,6 @@ fun AlbumArt(
                 overflow = TextOverflow.Ellipsis,
                 style = adaptiveTypography().labelSmall,
                 color = textSecondary,
-                fontWeight = FontWeight.Normal,
                 letterSpacing = 0.5.sp
             )
         }
