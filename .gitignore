@@ -45,3 +45,5 @@ tracknix_tinybert_multi/
 *.json
 *.aab
 *.png
+# Claude Code agent worktrees
+/.claude/
