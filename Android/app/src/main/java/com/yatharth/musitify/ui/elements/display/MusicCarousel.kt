@@ -108,7 +108,6 @@ fun MusicCarousel(
             Box(
                 modifier = Modifier
                     .width(itemWidth)
-                    .height(itemWidth + 80.dp)
                     .graphicsLayer {
                         scaleX = scaleTarget
                         scaleY = scaleTarget
@@ -131,7 +130,10 @@ fun MusicCarousel(
                         }
                     )
             ) {
-                AlbumArt(song, modifier = Modifier.fillMaxSize(), isPlaying = isPlaying)
+                AlbumArt(song, modifier = Modifier
+                    .fillMaxWidth()
+                    // Room for the 4dp hard shadow, which the row would clip.
+                    .padding(end = 4.dp, bottom = 6.dp), isPlaying = isPlaying)
             }
         }
     }
@@ -166,10 +168,9 @@ fun AlbumArt(
         borderThickness = 2.dp,
         rounding = 5
     ) {
-        // Fill the fixed card frame so the hard shadow lines up with the card.
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(12.dp)
         ) {
             AsyncImage(

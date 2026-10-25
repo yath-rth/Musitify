@@ -98,7 +98,6 @@ fun PlaylistCarousel(
             Box(
                 modifier = Modifier
                     .width(itemWidth)
-                    .height(itemWidth + 64.dp)
                     .graphicsLayer {
                         scaleX = scale
                         scaleY = scale
@@ -121,7 +120,10 @@ fun PlaylistCarousel(
                         }
                     )
             ) {
-                PlaylistArt(playlistInfo, modifier = Modifier.fillMaxSize())
+                PlaylistArt(playlistInfo, modifier = Modifier
+                    .fillMaxWidth()
+                    // Room for the 4dp hard shadow, which the row would clip.
+                    .padding(end = 4.dp, bottom = 6.dp))
             }
         }
     }
@@ -139,10 +141,9 @@ fun PlaylistArt(
         borderThickness = 2.dp,
         rounding = 5
     ) {
-        // Fill the fixed card frame so the hard shadow lines up with the card.
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(12.dp)
         ) {
             playlist.playlist.artPath?.let {
@@ -163,7 +164,7 @@ fun PlaylistArt(
                 color = text,
                 style = adaptiveTypography().bodyLarge,
                 fontWeight = FontWeight.Normal,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
