@@ -18,6 +18,7 @@ import com.yatharth.musitify.engine.AudioPlayer
 import com.yatharth.musitify.engine.DownloadLibrary
 import com.yatharth.musitify.engine.EnginePaths
 import com.yatharth.musitify.engine.engineModule
+import com.yatharth.musitify.network.syncModule
 import com.yatharth.musitify.platform.AppPaths
 import com.yatharth.musitify.service.IdManager
 import org.koin.core.module.Module
@@ -56,4 +57,4 @@ fun appEnginePaths(): EnginePaths = EnginePaths(
 )
 
 /** Every Koin module the app needs: `startKoin { modules(appModules()) }`. */
-fun appModules(): List<Module> = listOf(dataModule, engineModule(appEnginePaths()), repositoryModule)
+fun appModules(): List<Module> = listOf(dataModule, engineModule(appEnginePaths()), repositoryModule, syncModule)
