@@ -47,9 +47,10 @@ class RemoteChangesManager(
     /** Returns how many actions were applied without error. */
     suspend fun apply(actions: List<SyncAction>): Int {
         var applied = 0
+        val touchedPlaylists = mutableSetOf<Int>()
         for (action in actions) {
             try {
-                applyOne(action)
+                applyOne(action, touchedPlaylists)
                 applied++
             } catch (e: CancellationException) {
                 throw e
@@ -57,10 +58,31 @@ class RemoteChangesManager(
                 System.err.println("$tag: ${action.type} ${action.actionUuid} skipped: ${e.message}")
             }
         }
+        // Covers depend on the playlist's songs, so re-render once per touched playlist.
+        for (playlistId in touchedPlaylists) {
+            try {
+                playlistRepository.generatePlaylistArt(playlistId, refresh = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                System.err.println("$tag: cover for playlist $playlistId failed: ${e.message}")
+            }
+        }
         return applied
     }
 
-    private suspend fun applyOne(action: SyncAction) {
+    /** Backfills covers for playlists that have songs but no cover file. Never throws. */
+    suspend fun generateMissingCovers() {
+        try {
+            playlistRepository.generateMissingPlaylistArt()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            System.err.println("$tag: cover backfill failed: ${e.message}")
+        }
+    }
+
+    private suspend fun applyOne(action: SyncAction, touchedPlaylists: MutableSet<Int>) {
         val payload = parsePayload(action.payload)
         val songUuid = action.songUuid.cleanUuid()
         val playlistUuid = action.playlistUuid.cleanUuid()
@@ -128,6 +150,7 @@ class RemoteChangesManager(
                 val playlist = resolvePlaylist(playlistUuid, null)
                     ?: throw IOException("Playlist doesnt exist $playlistUuid")
                 if (songToPlaylistDao.find(song.id, playlist.id) != null) return
+                touchedPlaylists += playlist.id
 
                 val existing = songToPlaylistDao.getSongsInPlaylist(playlist.id)
                 val position = payload.str("position")?.toIntOrNull()?.takeIf { it >= 0 }
@@ -152,6 +175,7 @@ class RemoteChangesManager(
                 val song = resolveSong(songUuid, payload.str("url")) ?: return
                 val playlist = resolvePlaylist(playlistUuid, null) ?: return
                 songToPlaylistDao.remove(song.id, playlist.id)
+                touchedPlaylists += playlist.id
             }
 
             ActionType.PLAYLIST_SONG_REORDERED -> {

@@ -129,6 +129,7 @@ class ActionController(
         if (newActions.isNotEmpty()) {
             remoteChangesManager.apply(newActions)
         }
+        remoteChangesManager.generateMissingCovers()
 
         val maxId = nActions.maxOfOrNull { it.localId }
         if (maxId != null && maxId.toLong() > lastFetchedId) {
