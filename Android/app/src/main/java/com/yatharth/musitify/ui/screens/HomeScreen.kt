@@ -5,7 +5,9 @@ import androidx.collection.CircularArray
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -414,11 +416,17 @@ fun HomeScreen(
                                 onQueryChange = { homeScreenViewModel.onSearchQueryChange(it) },
                                 placeholder = "search your library"
                             )
+                            val listedSongs =
+                                if (songFilterQuery.isBlank()) allSongs else filteredSongs
+                            if (listedSongs.isEmpty() && songFilterQuery.isNotBlank()) {
+                                NoSearchResults(
+                                    query = songFilterQuery,
+                                    onClear = { homeScreenViewModel.onSearchQueryChange("") }
+                                )
+                            }
                             LazyColumn(
                                 Modifier.padding(vertical = 12.dp)
                             ) {
-                                val listedSongs =
-                                    if (songFilterQuery.isBlank()) allSongs else filteredSongs
                                 items(listedSongs) { song ->
                                     SongListRow(
                                         song = song,
@@ -430,9 +438,10 @@ fun HomeScreen(
                                                 null
                                             )
                                         },
+                                        // Same menu as the carousel; delete is one of its options.
                                         onLongClick = {
-                                            songToDelete = song.id to song.name
-                                            showSongDeleteConfirm.value = true
+                                            songForContextMenu = song
+                                            showSongContextMenu = true
                                         }
                                     )
                                 }
@@ -924,6 +933,36 @@ private fun LibrarySearchBar(
     )
 }
 
+/** Shown in place of the list when a search matches nothing. */
+@Composable
+private fun NoSearchResults(query: String, onClear: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "No songs match \"$query\"",
+            color = text,
+            style = adaptiveTypography().bodyMedium
+        )
+        Text(
+            text = "Check the spelling, or search by artist.",
+            color = textSecondary,
+            style = adaptiveTypography().labelSmall
+        )
+        TextButton(onClick = onClear) {
+            Text(
+                text = "CLEAR SEARCH",
+                color = text,
+                style = adaptiveTypography().labelMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
+}
+
 /**
  * A single row in the dense All Songs list. Replaces the carousel as the
  * default way to move through the full library — ~40dp art instead of a
@@ -932,6 +971,7 @@ private fun LibrarySearchBar(
  * NOTE: song.duration / song.playCount are guessed field names — adjust
  * to match your actual Song entity.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SongListRow(
     song: Song,
@@ -945,7 +985,7 @@ private fun SongListRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         AsyncImage(

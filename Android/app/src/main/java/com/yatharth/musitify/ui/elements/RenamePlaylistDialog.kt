@@ -51,13 +51,6 @@ fun RenamePlaylistDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Current name: ${playlist.name}",
-                    style = adaptiveTypography().bodySmall,
-                    color = text.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium
-                )
-
                 Box(modifier = Modifier.fillMaxWidth().padding(end = 4.dp, bottom = 4.dp)) {
                     Box(
                         modifier = Modifier
