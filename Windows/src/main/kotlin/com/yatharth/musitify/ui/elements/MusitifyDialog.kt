@@ -7,6 +7,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import java.util.concurrent.atomic.AtomicInteger
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -16,6 +18,22 @@ import com.yatharth.musitify.ui.theme.accentColor1
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.secondaryBg
 import com.yatharth.musitify.ui.theme.text
+
+/**
+ * Number of [MusitifyDialog]s currently shown. The window only maps Escape to "back"
+ * while this is 0 — otherwise Escape belongs to the dialog (dismiss).
+ */
+object OpenDialogs {
+    private val count = AtomicInteger(0)
+    val isAnyOpen: Boolean get() = count.get() > 0
+    internal fun opened() {
+        count.incrementAndGet()
+    }
+
+    internal fun closed() {
+        count.updateAndGet { (it - 1).coerceAtLeast(0) }
+    }
+}
 
 /**
  * Shared dialog shell used by every Android dialog: Material3 AlertDialog with
@@ -48,6 +66,10 @@ fun MusitifyDialog(
     dismissButton: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    DisposableEffect(Unit) {
+        OpenDialogs.opened()
+        onDispose { OpenDialogs.closed() }
+    }
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = titleContent,
