@@ -9,8 +9,6 @@ import com.yatharth.musitify.service.SleepTimerDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
-//TODO: Interact with fillbar to change the position of what you are hearing in the music track
-
 @HiltViewModel
 class PlaybackControllerViewModel @Inject constructor(
     private val mediaControllerRepository: MediaControllerRepository
@@ -52,6 +50,10 @@ class PlaybackControllerViewModel @Inject constructor(
 
     fun previous() {
         controller.value?.seekToPrevious()
+    }
+
+    fun seekTo(positionMs: Long) {
+        mediaControllerRepository.seekTo(positionMs)
     }
 
     fun startSleepTimer(duration: SleepTimerDuration) {

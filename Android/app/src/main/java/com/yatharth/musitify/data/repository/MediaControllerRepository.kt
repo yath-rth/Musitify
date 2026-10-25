@@ -152,6 +152,7 @@ class MediaControllerRepository @Inject constructor(
 
                 _uiState.update {
                     it.copy(
+                        currentSongId = lastTrackedSongId,
                         currentTitle = mediaItem?.mediaMetadata?.title?.toString(),
                         positionMs = 0
                     )
@@ -217,6 +218,21 @@ class MediaControllerRepository @Inject constructor(
                 )
             )
         }
+    }
+
+    /** Jumps within the current track. Updates the UI straight away so a
+     *  paused player (which isn't polling position) still shows the new spot. */
+    fun seekTo(positionMs: Long) {
+        val mc = controller.value ?: return
+        val target = positionMs.coerceAtLeast(0)
+        // Credit what was actually heard before the jump, then measure from the
+        // new spot, so skipping ahead isn't counted as listening time.
+        if (mc.isPlaying) {
+            accumulatedMs += (mc.currentPosition - lastPositionMs).coerceIn(0, 15_000)
+        }
+        lastPositionMs = target
+        mc.seekTo(target)
+        _uiState.update { it.copy(positionMs = target) }
     }
 
     fun release() {
