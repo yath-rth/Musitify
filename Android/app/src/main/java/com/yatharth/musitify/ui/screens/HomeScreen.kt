@@ -6,6 +6,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import kotlinx.coroutines.channels.Channel
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
 import com.yatharth.musitify.ui.theme.primaryAction
 import com.yatharth.musitify.ui.elements.CustomButton
 import androidx.compose.ui.semantics.Role
@@ -169,6 +172,21 @@ fun HomeScreen(
     val selectedPlaylist: PlaylistInfo? =
         playlists.firstOrNull { it.playlist.id == selectedPlaylistId }
 
+    // Finished downloads leave the card and are announced once at the bottom,
+    // so the card only takes space while there's something to watch or retry.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val announcements = remember { Channel<String>(Channel.UNLIMITED) }
+    LaunchedEffect(downloadJobs) {
+        downloadJobs.filter { it.status == DownloadStatus.COMPLETED }.forEach { job ->
+            announcements.trySend(completedMessage(job))
+            addSongsViewModel.dismiss(job.id)
+        }
+    }
+    LaunchedEffect(Unit) {
+        for (message in announcements) snackbarHostState.showSnackbar(message)
+    }
+    val visibleJobs = downloadJobs.filter { it.status != DownloadStatus.COMPLETED }
+
     // Once a URL is queued, close the dialog; the queue card shows progress from here.
     LaunchedEffect(addState) {
         if (addState is AddSongsUiState.Queued) {
@@ -200,6 +218,9 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize(),
         containerColor = background,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data -> InfoToast(data.visuals.message) }
+        },
         topBar = {
             AppHeader(
                 tab = tab,
@@ -246,10 +267,10 @@ fun HomeScreen(
         ) {
 
             // ---- Download queue ----
-            if (downloadJobs.isNotEmpty()) {
+            if (visibleJobs.isNotEmpty()) {
                 item(key = "download_queue") {
                     DownloadQueueCard(
-                        jobs = downloadJobs,
+                        jobs = visibleJobs,
                         onCancel = { addSongsViewModel.cancel(it) },
                         onRetry = { addSongsViewModel.retry(it) },
                         onClearFinished = { addSongsViewModel.clearFinished() },
@@ -864,7 +885,7 @@ private fun DownloadQueueCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (activeCount > 0) "DOWNLOADS · $activeCount ACTIVE" else "DOWNLOADS",
+                    text = if (activeCount > 0) "DOWNLOADING · $activeCount" else "DOWNLOADS",
                     color = text,
                     style = adaptiveTypography().labelLarge,
                     fontWeight = FontWeight.ExtraBold,
@@ -938,8 +959,8 @@ private fun DownloadJobRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = (if (job.type == DownloadType.PLAYLIST) "Playlist · " else "Song · ") +
-                        displayUrl(job.url),
+                text = job.title
+                    ?: if (job.type == DownloadType.PLAYLIST) "Playlist (getting name…)" else "Song (getting name…)",
                 color = text,
                 style = adaptiveTypography().bodyMedium,
                 fontWeight = FontWeight.Medium,
@@ -997,9 +1018,28 @@ private fun DownloadJobRow(
 
 private const val COLLAPSED_ROWS = 3
 
-/** "https://www.youtube.com/watch?v=abc" -> "youtube.com/watch?v=abc" */
-private fun displayUrl(url: String): String =
-    url.removePrefix("https://").removePrefix("http://").removePrefix("www.")
+private fun completedMessage(job: DownloadJob): String = when (job.type) {
+    DownloadType.PLAYLIST ->
+        "Added ${job.title ?: "playlist"} · ${Formatter.count(job.total, "song")}"
+    DownloadType.SONG -> "Added ${job.title ?: "song"}"
+}
+
+/** Short message in the app's card style, shown above the player bar. */
+@Composable
+private fun InfoToast(message: String) {
+    ShadowBox(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            text = message,
+            color = text,
+            style = adaptiveTypography().bodyMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        )
+    }
+}
 
 /**
  * Dense search entry point for the list-mode browse view. Sits above the
