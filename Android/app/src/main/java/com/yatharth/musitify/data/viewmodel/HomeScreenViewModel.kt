@@ -176,13 +176,13 @@ class HomeScreenViewModel @Inject constructor(
         .map { it.trim() }
         .distinctUntilChanged()
         .flatMapLatest { query ->
-            if (query.isEmpty()) flowOf(YouTubeSearchState.Idle)
+            if (query.isEmpty()) flowOf<YouTubeSearchState>(YouTubeSearchState.Idle)
             else songRepository.getFilteredSongs(query)
                 .map { it.isEmpty() }
                 .distinctUntilChanged()
                 .flatMapLatest { notInLibrary ->
-                    if (!notInLibrary) flowOf(YouTubeSearchState.Idle)
-                    else flow {
+                    if (!notInLibrary) flowOf<YouTubeSearchState>(YouTubeSearchState.Idle)
+                    else flow<YouTubeSearchState> {
                         emit(YouTubeSearchState.Loading)
                         emit(
                             try {
