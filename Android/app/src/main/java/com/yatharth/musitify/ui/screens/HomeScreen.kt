@@ -391,7 +391,7 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            } else {
+            } else if (selectedPlaylist != null) {
                 val playlistId = selectedPlaylist.playlist.id
                 item(key = "playlist_header") {
                     PlaylistHeader(
