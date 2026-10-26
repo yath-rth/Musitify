@@ -115,6 +115,41 @@ def downloadSong(url, output_path, retries=3, delay=3):
 
     raise last_error
 
+def search_youtube(query, limit=8):
+    """Top YouTube matches as a JSON string: [{id, url, title, artist, duration, thumbnail}]."""
+    opts = {"extract_flat": True, "quiet": True, "no_warnings": True, "skip_download": True}
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(f"ytsearch{int(limit)}:{query}", download=False)
+    results = []
+    for entry in (info.get("entries") or []):
+        vid = entry.get("id") if entry else None
+        if not vid:
+            continue
+        results.append({
+            "id": vid,
+            "url": f"https://www.youtube.com/watch?v={vid}",
+            "title": entry.get("title") or "Unknown title",
+            "artist": pick_artist(entry),
+            "duration": entry.get("duration"),
+            "thumbnail": f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg",
+        })
+    return json.dumps(results)
+
+
+def get_stream_url(url):
+    """Direct audio stream for a quick preview, without downloading anything."""
+    opts = {
+        "format": "bestaudio[ext=m4a]/bestaudio/best",
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "noplaylist": True,
+    }
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+    return info["url"]
+
+
 def get_playlist_urls(playlist_url):
     ydl_opts = {"extract_flat": True, "quiet": True}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:

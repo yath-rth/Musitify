@@ -6,12 +6,20 @@ import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.repository.PlaylistRepository
 import com.yatharth.musitify.data.repository.SongRepository
+import com.yatharth.musitify.data.repository.YouTubeResult
+import com.yatharth.musitify.data.repository.YouTubeSearchRepository
+import com.yatharth.musitify.music.PreviewPlayer
 import com.yatharth.musitify.network.ActionController
 import com.yatharth.musitify.network.SyncController
 import com.yatharth.musitify.ui.elements.SortMode
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,7 +37,9 @@ class HomeScreenViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val playlistRepository: PlaylistRepository,
     private val syncController: SyncController,
-    private val actionController: ActionController
+    private val actionController: ActionController,
+    private val youTubeSearchRepository: YouTubeSearchRepository,
+    private val previewPlayer: PreviewPlayer
 ) : ViewModel() {
 
     val allSongs = songRepository.allSongs.stateIn(
@@ -160,6 +170,70 @@ class HomeScreenViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
+    /** YouTube is only searched when nothing in the library matches the query. */
+    val youTubeSearch: StateFlow<YouTubeSearchState> = _searchQuery
+        .debounce(600.milliseconds)
+        .map { it.trim() }
+        .distinctUntilChanged()
+        .flatMapLatest { query ->
+            if (query.isEmpty()) flowOf(YouTubeSearchState.Idle)
+            else songRepository.getFilteredSongs(query)
+                .map { it.isEmpty() }
+                .distinctUntilChanged()
+                .flatMapLatest { notInLibrary ->
+                    if (!notInLibrary) flowOf(YouTubeSearchState.Idle)
+                    else flow {
+                        emit(YouTubeSearchState.Loading)
+                        emit(
+                            try {
+                                YouTubeSearchState.Results(youTubeSearchRepository.search(query))
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                YouTubeSearchState.Error(e.message ?: "YouTube search failed")
+                            }
+                        )
+                    }
+                }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), YouTubeSearchState.Idle)
+
+    val previewingId: StateFlow<String?> = previewPlayer.playingId
+    val previewError: StateFlow<String?> = previewPlayer.error
+
+    private var previewJob: Job? = null
+
+    /** Tapping the thumbnail of the result being previewed stops it. */
+    fun togglePreview(result: YouTubeResult) {
+        previewJob?.cancel()
+        if (previewPlayer.playingId.value == result.id) {
+            previewPlayer.stop()
+            return
+        }
+        previewPlayer.markLoading(result.id)
+        previewJob = viewModelScope.launch {
+            try {
+                previewPlayer.play(result.id, youTubeSearchRepository.streamUrl(result.url))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                previewPlayer.stop()
+                previewPlayer.setError("Couldn't load this preview")
+            }
+        }
+    }
+
+    fun stopPreview() {
+        previewJob?.cancel()
+        previewPlayer.stop()
+    }
+
+    fun clearPreviewError() = previewPlayer.clearError()
+
+    override fun onCleared() {
+        previewPlayer.stop()
+    }
+
     fun resetState() {
         _state.value = PlaylistDialogUiState.Idle
     }
@@ -215,6 +289,13 @@ class HomeScreenViewModel @Inject constructor(
             playlistRepository.reorderSongsInPlaylist(playlistId, fromIndex, toIndex)
         }
     }
+}
+
+sealed interface YouTubeSearchState {
+    object Idle : YouTubeSearchState
+    object Loading : YouTubeSearchState
+    data class Results(val items: List<YouTubeResult>) : YouTubeSearchState
+    data class Error(val message: String) : YouTubeSearchState
 }
 
 sealed interface PlaylistDialogUiState {
