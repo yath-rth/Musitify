@@ -256,15 +256,28 @@ fun HomeScreen(
             SnackbarHost(snackbarHostState) { data -> InfoToast(data.visuals.message) }
         },
         topBar = {
-            AppHeader(
-                tab = tab,
-                onTabSelected = { tab = it },
-                onSync = {
-                    homeScreenViewModel.syncLibrary()
-                    homeScreenViewModel.fetchLibrary()
-                },
-                onAddSongs = { showAddDialog = true }
-            )
+            Column {
+                AppHeader(
+                    tab = tab,
+                    onTabSelected = { tab = it },
+                    onSync = {
+                        homeScreenViewModel.syncLibrary()
+                        homeScreenViewModel.fetchLibrary()
+                    },
+                    onAddSongs = { showAddDialog = true }
+                )
+                // Pinned in the top bar so search is reachable without scrolling.
+                if (tab == HomeTab.LIBRARY && selectedPlaylist == null) {
+                    LibrarySearchBar(
+                        query = songFilterQuery,
+                        onQueryChange = { homeScreenViewModel.onSearchQueryChange(it) },
+                        placeholder = "search your library or YouTube",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dotGridBackground()
+                    )
+                }
+            }
         },
         bottomBar = {
             PlaybackControls(
@@ -316,7 +329,7 @@ fun HomeScreen(
                 }
             }
 
-            if (selectedPlaylist == null) {
+            if (selectedPlaylist == null && songFilterQuery.isBlank()) {
                 item(key = "playlists_header") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -489,7 +502,7 @@ fun HomeScreen(
                     }
                 }
 
-                if (!isListMode) {
+                if (!isListMode && songFilterQuery.isBlank()) {
                     item(key = "songs_carousel") {
                         MusicCarousel(
                             songs = allSongs,
@@ -517,11 +530,6 @@ fun HomeScreen(
                     val ytResults = (youTubeSearch as? YouTubeSearchState.Results)?.items
                     item(key = "songs_search") {
                         Column {
-                            LibrarySearchBar(
-                                query = songFilterQuery,
-                                onQueryChange = { homeScreenViewModel.onSearchQueryChange(it) },
-                                placeholder = "search your library"
-                            )
                             if (listedSongs.isEmpty() && songFilterQuery.isNotBlank()) {
                                 when {
                                     youTubeSearch is YouTubeSearchState.Loading ->
