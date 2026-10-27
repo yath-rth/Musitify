@@ -14,16 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yatharth.musitify.engine.SleepTimerDuration
 import com.yatharth.musitify.engine.SleepTimerState
-import com.yatharth.musitify.ui.theme.JetBrainsMonoNL
-import com.yatharth.musitify.ui.theme.accentColor1
-import com.yatharth.musitify.ui.theme.adaptiveSp
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.text
@@ -40,16 +36,15 @@ private val secondRow = listOf(
 )
 
 /**
- * Sleep timer dialog (1:1 with Android): live MM:SS countdown + "CANCEL TIMER"
- * while active, otherwise a 3×2 grid of durations. Any choice also dismisses.
- *
- * Desktop fix: Android rendered the countdown with the undefined `headlineLarge`
- * (system font); here it uses JetBrains Mono at the same 32/40 sp metrics.
+ * Sleep timer dialog (1:1 with Android): while active, the time left (or "stops when this
+ * song ends") + "CANCEL TIMER"; otherwise "THIS SONG" and a 3×2 grid of durations.
+ * Any choice also dismisses.
  */
 @Composable
 fun SleepTimerDialog(
     sleepTimerState: SleepTimerState,
     onSetTimer: (SleepTimerDuration) -> Unit,
+    onEndOfSong: () -> Unit,
     onCancelTimer: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -57,7 +52,18 @@ fun SleepTimerDialog(
         onDismissRequest = onDismiss,
         title = "SLEEP TIMER",
         confirmButton = {
-            DialogConfirmButton(label = "CLOSE", onClick = onDismiss, pill = true)
+            CustomButton(onClick = onDismiss) {
+                Text(
+                    text = "CLOSE",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = text,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp,
+                    modifier = Modifier
+                        .background(shape = RoundedCornerShape(10.dp), color = itemsBg.copy(alpha = 0.8f))
+                        .padding(10.dp)
+                )
+            }
         },
     ) {
         Column(
@@ -65,12 +71,18 @@ fun SleepTimerDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (sleepTimerState.isActive) {
+            if (sleepTimerState.isActive && sleepTimerState.endOfSong) {
                 Text(
-                    text = "Timer Active",
+                    text = "Music stops when this song ends.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = accentColor1,
-                    fontWeight = FontWeight.Bold
+                    color = text,
+                    textAlign = TextAlign.Center
+                )
+            } else if (sleepTimerState.isActive) {
+                Text(
+                    text = "Music stops in",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = text
                 )
 
                 val remainingMinutes = (sleepTimerState.remainingMs / 60000).toInt()
@@ -78,16 +90,12 @@ fun SleepTimerDialog(
 
                 Text(
                     text = String.format("%02d:%02d", remainingMinutes, remainingSeconds),
-                    style = TextStyle(
-                        fontFamily = JetBrainsMonoNL,
-                        fontSize = adaptiveSp(32f),
-                        lineHeight = adaptiveSp(40f),
-                        letterSpacing = 0.sp
-                    ),
-                    color = text,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium,
+                    color = text
                 )
+            }
 
+            if (sleepTimerState.isActive) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 CustomButton(
@@ -110,13 +118,31 @@ fun SleepTimerDialog(
                 }
             } else {
                 Text(
-                    text = "Set sleep timer duration",
+                    text = "Stop the music after",
                     style = MaterialTheme.typography.bodySmall,
                     color = text,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                // Most common choice, so it comes first and full width.
+                CustomButton(
+                    onClick = {
+                        onEndOfSong()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "THIS SONG",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = text,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp)
+                    )
+                }
 
                 listOf(firstRow, secondRow).forEach { row ->
                     Row(

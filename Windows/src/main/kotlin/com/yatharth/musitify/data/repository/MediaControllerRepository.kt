@@ -64,6 +64,7 @@ class MediaControllerRepository(
     private val listenTracker = ListenTracker { trackId, deltaMs -> recordListen(trackId.toInt(), deltaMs) }
     private var stateJob: Job? = null
     private var trackingJob: Job? = null
+    private var sleepEndJob: Job? = null
 
     /** Creates/attaches the player (idempotent). Repeat starts at ALL, as Android sets on connect. */
     @Synchronized
@@ -75,6 +76,12 @@ class MediaControllerRepository(
             player.state.collect { _uiState.value = it.toUiState() }
         }
         trackingJob = listenTracker.bind(scope, player)
+        // "End of song" sleep timer fired: the song finished and playback paused.
+        sleepEndJob = scope.launch {
+            player.stoppedAtTrackEnd.collect {
+                if (sleepTimerManager.state.value.endOfSong) sleepTimerManager.cancelTimer()
+            }
+        }
         _controller.value = player
     }
 
@@ -111,13 +118,22 @@ class MediaControllerRepository(
     }
 
     fun startSleepTimer(duration: SleepTimerDuration) {
+        controller.value?.stopAfterCurrentTrack = false
         sleepTimerManager.startTimer(duration) {
             // When the timer completes, pause playback (immediate, as Android).
             controller.value?.pause()
         }
     }
 
+    /** Pause once the current song finishes. */
+    fun startSleepAtEndOfSong() {
+        connect()
+        sleepTimerManager.startEndOfSong()
+        controller.value?.stopAfterCurrentTrack = true
+    }
+
     fun cancelSleepTimer() {
+        controller.value?.stopAfterCurrentTrack = false
         sleepTimerManager.cancelTimer()
     }
 
@@ -155,6 +171,7 @@ class MediaControllerRepository(
         listenTracker.flush()
         trackingJob?.cancel()
         stateJob?.cancel()
+        sleepEndJob?.cancel()
         controller.value?.shutdown()
         _controller.value = null
     }
