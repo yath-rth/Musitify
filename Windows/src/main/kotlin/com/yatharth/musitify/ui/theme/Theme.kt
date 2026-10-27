@@ -11,9 +11,9 @@ import androidx.compose.ui.platform.LocalWindowInfo
 
 // Android defines identical light & dark schemes; the app is always this palette.
 val MusitifyColorScheme = lightColorScheme(
-    primary = accentColor1,
+    primary = text,
     onPrimary = itemsBg,
-    primaryContainer = accentColor1.copy(alpha = 0.2f),
+    primaryContainer = accentColor2.copy(alpha = 0.2f),
     onPrimaryContainer = text,
     secondary = accentColor2,
     onSecondary = itemsBg,
@@ -21,6 +21,7 @@ val MusitifyColorScheme = lightColorScheme(
     onSecondaryContainer = text,
     tertiary = accentColor3,
     onTertiary = text,
+    error = danger,
     background = background,
     onBackground = text,
     surface = itemsBg,
