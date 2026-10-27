@@ -95,7 +95,9 @@ data class PlaylistStat(
 data class StatsSnapshot(
     val totalListenMs: Long = 0,
     val todayListenMs: Long = 0,
+    /** Last 7 days including today (rolling, not the calendar week). */
     val thisWeekListenMs: Long = 0,
+    /** Last 30 days including today (rolling, not the calendar month). */
     val thisMonthListenMs: Long = 0,
     val listensToday: Int = 0,
     val listensThisMonth: Int = 0,
@@ -123,8 +125,11 @@ object StatsComputer {
         if (sessions.isEmpty()) return StatsSnapshot()
 
         val todayStart = startOfDay(now)
-        val weekStart = startOfWeek(now)
-        val monthStart = startOfMonth(now)
+        // Rolling windows, not calendar ones: a calendar week reset everything
+        // to 0 every Sunday/Monday morning (and the month on the 1st), which
+        // read as lost history.
+        val weekStart = daysBefore(todayStart, 6)    // last 7 days incl. today
+        val monthStart = daysBefore(todayStart, 29)  // last 30 days incl. today
 
         var total = 0L
         var today = 0L
@@ -248,29 +253,29 @@ object StatsComputer {
     private fun calculateStreaks(dailyMap: Map<Long, Long>, todayStart: Long): Pair<Int, Int> {
         if (dailyMap.isEmpty()) return 0 to 0
 
+        // Current streak: consecutive days back from today. Today doesn't
+        // count against it until it's over, so a streak doesn't show 0 just
+        // because you haven't listened yet this morning.
         var currentStreak = 0
-        var longestStreak = 0
-        var tempStreak = 0
         var checkDay = todayStart
-
-        // Calculate current streak (going backwards from today)
+        if (dailyMap.getOrDefault(todayStart, 0L) <= 0) checkDay = previousDay(todayStart)
         while (dailyMap.getOrDefault(checkDay, 0L) > 0) {
             currentStreak++
-            checkDay -= DAY_MS
+            checkDay = previousDay(checkDay)
         }
 
-        // Calculate longest streak
-        val sortedDays = dailyMap.keys.sorted()
-        for (day in sortedDays) {
-            if (dailyMap.getOrDefault(day, 0L) > 0) {
-                tempStreak++
-                longestStreak = maxOf(longestStreak, tempStreak)
-            } else {
-                tempStreak = 0
-            }
+        // Longest streak: longest run of consecutive days. (It used to count
+        // every day with listening, gaps included.)
+        var longestStreak = 0
+        var run = 0
+        var previous: Long? = null
+        for (day in dailyMap.filterValues { it > 0 }.keys.sorted()) {
+            run = if (previous != null && previousDay(day) == previous) run + 1 else 1
+            longestStreak = maxOf(longestStreak, run)
+            previous = day
         }
 
-        return currentStreak to longestStreak
+        return currentStreak to maxOf(longestStreak, currentStreak)
     }
 
     private fun calculateCompletionRate(sessions: List<ListeningSession>): Double {
@@ -309,7 +314,6 @@ object StatsComputer {
     private const val SECOND = Calendar.SECOND
     private const val MILLISECOND = Calendar.MILLISECOND
     private const val DAY_OF_MONTH = Calendar.DAY_OF_MONTH
-    private const val DAY_OF_WEEK = Calendar.DAY_OF_WEEK
 
     private fun startOfDay(ms: Long): Long =
         Calendar.getInstance().apply {
@@ -320,15 +324,15 @@ object StatsComputer {
             set(MILLISECOND, 0)
         }.timeInMillis
 
-    private fun startOfWeek(ms: Long): Long =
+    /** Start of the day before [dayStart]; safe across daylight-saving changes. */
+    private fun previousDay(dayStart: Long): Long = startOfDay(dayStart - 1)
+
+    /** Start of the day [days] days before [dayStart]. */
+    private fun daysBefore(dayStart: Long, days: Int): Long =
         Calendar.getInstance().apply {
-            timeInMillis = ms
-            set(HOUR_OF_DAY, 0)
-            set(MINUTE, 0)
-            set(SECOND, 0)
-            set(MILLISECOND, 0)
-            set(DAY_OF_WEEK, firstDayOfWeek)
-        }.timeInMillis
+            timeInMillis = dayStart
+            add(DAY_OF_MONTH, -days)
+        }.timeInMillis.let(::startOfDay)
 
     private fun startOfMonth(ms: Long): Long =
         Calendar.getInstance().apply {
