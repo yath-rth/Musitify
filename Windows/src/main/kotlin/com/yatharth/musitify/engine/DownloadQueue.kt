@@ -39,7 +39,7 @@ data class DownloadJob(
     val failed: Int = 0,
     /** Single-song jobs: yt-dlp download progress 0..1, null = indeterminate. */
     val progress: Float? = null,
-    /** Playlist jobs: playlist title once known. */
+    /** Song or playlist name once known, so the UI never has to show the URL. */
     val title: String? = null,
 ) {
     val isActive get() = status == DownloadStatus.QUEUED || status == DownloadStatus.RUNNING
@@ -115,6 +115,11 @@ class DownloadQueue(
             it.copy(status = DownloadStatus.QUEUED, completed = 0, total = 0, error = null, failed = 0, progress = null)
         }
         queue.trySend(id)
+    }
+
+    /** Removes one finished job, e.g. after the UI has announced it. */
+    fun dismiss(id: Long) {
+        _jobs.update { list -> list.filter { it.id != id || it.isActive } }
     }
 
     fun clearFinished() {
@@ -199,6 +204,7 @@ class DownloadQueue(
             update(id) { if (it.status == DownloadStatus.RUNNING) it.copy(progress = p) else it }
         }
         library.persistSong(song)
+        update(id) { it.copy(title = song.normalizedName) }
     }
 
     private suspend fun downloadPlaylist(id: Long, url: String) {
