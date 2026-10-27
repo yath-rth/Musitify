@@ -36,7 +36,7 @@ fun CustomAlertBox(
         onDismissRequest = { showClearConfirm.value = false },
         title = title.uppercase(),
         confirmButton = {
-            DialogConfirmButton(
+            DialogDangerButton(
                 label = yes.uppercase(),
                 onClick = {
                     showClearConfirm.value = false

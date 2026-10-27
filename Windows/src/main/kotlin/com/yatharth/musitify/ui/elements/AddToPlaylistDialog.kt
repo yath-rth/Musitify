@@ -2,16 +2,30 @@ package com.yatharth.musitify.ui.elements
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.data.viewmodel.PlaylistDialogUiState
-import com.yatharth.musitify.ui.theme.accentColor2
+import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
+import com.yatharth.musitify.util.SongDisplay
 
 /** "ADD TO PLAYLIST" for a single song: pick an existing playlist or create a new one. */
 @Composable
@@ -41,44 +55,86 @@ fun AddToPlaylistDialog(
         confirmButton = {
             DialogConfirmButton(
                 label = if (state is PlaylistDialogUiState.Loading) "ADDING..." else "ADD",
-                onClick = onSubmit,
-                color = accentColor2
+                onClick = onSubmit
             )
         },
         dismissButton = { DialogCancelButton(onClick = onDismiss) },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
-                text = "Song: ${song.name}",
+                text = "Song: ${SongDisplay.title(song)}",
                 style = MaterialTheme.typography.bodySmall,
-                color = text.copy(alpha = 0.7f),
+                color = textSecondary,
                 fontWeight = FontWeight.Medium
             )
 
-            ModeSwitchRow(
-                label = if (isAddToExistingMode) "ADD TO EXISTING" else "CREATE NEW",
-                checked = isAddToExistingMode,
-                onCheckedChange = onModeChange
+            // Both choices visible and labelled, instead of a switch whose
+            // label flipped to describe its current state.
+            SegmentedControl(
+                options = listOf("EXISTING", "NEW"),
+                selectedIndex = if (isAddToExistingMode) 0 else 1,
+                onSelect = { onModeChange(it == 0) },
+                modifier = Modifier.fillMaxWidth()
             )
 
             if (isAddToExistingMode) {
-                PlaylistPicker(
-                    playlists = playlists,
-                    selectedPlaylist = selectedPlaylist,
-                    onSelectPlaylist = onSelectPlaylist,
-                    maxHeight = 200.dp
-                )
+                if (playlists.isEmpty()) {
+                    Text(
+                        text = "No playlists yet. Choose NEW to make one.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = textSecondary,
+                        letterSpacing = 1.sp
+                    )
+                } else {
+                    Text(
+                        text = "CHOOSE ONE",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = textSecondary,
+                        letterSpacing = 1.2.sp
+                    )
+                    LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
+                        items(playlists, key = { it.playlist.id }) { playlist ->
+                            val selected = selectedPlaylist?.playlist?.id == playlist.playlist.id
+                            // The whole row picks the playlist, not just the circle.
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .handCursor()
+                                    .selectable(
+                                        selected = selected,
+                                        role = Role.RadioButton,
+                                        onClick = { onSelectPlaylist(playlist) }
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                RadioButton(
+                                    selected = selected,
+                                    onClick = null, // the row handles selection
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = cardBorder,
+                                        unselectedColor = cardBorder
+                                    )
+                                )
+                                Text(
+                                    text = playlist.playlist.name,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = text
+                                )
+                            }
+                        }
+                    }
+                }
             } else {
                 TracknixTextField(
                     value = newPlaylistName,
                     onValueChange = onNewPlaylistNameChange,
                     placeholder = "Playlist name",
-                    showOutline = false,
                     onSubmit = onSubmit,
                 )
             }
 
-            PlaylistStateLine(state, loadingLabel = "ADDING...", successLabel = "ADDED")
+            if (state is PlaylistDialogUiState.Error) DialogErrorText(state.message)
         }
     }
 }

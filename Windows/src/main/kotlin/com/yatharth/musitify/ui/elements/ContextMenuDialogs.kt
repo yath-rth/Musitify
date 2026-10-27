@@ -30,6 +30,7 @@ import com.yatharth.musitify.ui.theme.accentColor1
 import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.util.SongDisplay
 
 /** Long-press / right-click menu for a song: ADD TO PLAYLIST, RENAME, DELETE. */
 @Composable
@@ -42,7 +43,7 @@ fun SongContextMenuDialog(
 ) {
     ContextMenuDialog(
         artPath = song.artPath,
-        name = song.name,
+        name = SongDisplay.title(song),
         subtitle = song.artist,
         addLabel = "ADD TO PLAYLIST",
         onDismiss = onDismiss,
