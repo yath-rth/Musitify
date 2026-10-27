@@ -3,7 +3,6 @@ package com.yatharth.musitify.ui.elements.display
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -19,7 +18,9 @@ import com.yatharth.musitify.data.entity.Song
 import com.yatharth.musitify.ui.elements.ArtImage
 import com.yatharth.musitify.ui.elements.ShadowBox
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
+import com.yatharth.musitify.util.SongDisplay
 import com.yatharth.musitify.util.SongMedia.playCountOf
 
 /**
@@ -42,7 +43,6 @@ fun MusicCarousel(
     CoverFlowCarousel(
         itemCount = songs.size,
         itemWidth = size.dp,
-        itemHeight = size.dp + 80.dp,
         spacing = spacing.dp,
         focusIndex = if (scroll) currentPlayingIndex else null,
         key = { songs[it].id },
@@ -50,7 +50,14 @@ fun MusicCarousel(
         onContext = { onLongSelect(songs[it]) },
         modifier = modifier,
     ) { index ->
-        AlbumArt(songs[index], modifier = Modifier.fillMaxSize(), isPlaying = index == currentPlayingIndex)
+        AlbumArt(
+            songs[index],
+            modifier = Modifier
+                .fillMaxWidth()
+                // Room for the 4dp hard shadow, which the row would clip.
+                .padding(end = 4.dp, bottom = 6.dp),
+            isPlaying = index == currentPlayingIndex
+        )
     }
 }
 
@@ -62,13 +69,15 @@ fun AlbumArt(
 ) {
     ShadowBox(
         modifier = modifier,
-        shadowOffsetX = 0.dp,
-        shadowOffsetY = 0.dp,
-        borderThickness = 6.dp,
+        shadowOffsetX = 4.dp,
+        shadowOffsetY = 4.dp,
+        borderThickness = 2.dp,
         rounding = 5
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
         ) {
             ArtImage(
                 path = song.artPath,
@@ -81,21 +90,29 @@ fun AlbumArt(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = song.name,
-                maxLines = 2,
+                text = SongDisplay.title(song),
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
                 color = text,
                 fontWeight = FontWeight.Normal
             )
+            SongDisplay.artist(song)?.let {
+                Text(
+                    text = it,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textSecondary
+                )
+            }
 
             Text(
-                text = Formatter.formatTime(song.length) + " • " + playCountOf(song) + " plays",
+                text = Formatter.formatTime(song.length) + " • " + Formatter.count(playCountOf(song), "play"),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.labelSmall,
-                color = text.copy(alpha = 0.6f),
-                fontWeight = FontWeight.ExtraLight,
+                color = textSecondary,
                 letterSpacing = 0.5.sp
             )
         }

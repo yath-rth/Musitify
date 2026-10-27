@@ -1,46 +1,61 @@
 package com.yatharth.musitify.ui.elements
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.yatharth.musitify.data.entity.Song
-import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.cardBorder
-import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
-import com.yatharth.musitify.util.SongMedia.playCountOf
+import com.yatharth.musitify.util.SongDisplay
+
+private val RowSpacing = 10.dp
 
 /**
- * Playlist songs with up/down arrow buttons (Android has no drag reordering — the header
- * says "USE ARROWS TO REORDER SONGS"). Fixed 500 dp tall. Desktop: rows animate moves.
+ * Playlist songs you can reorder by dragging the handle (mouse or touch). The order
+ * changes under the pointer and is saved once when you let go. Screen readers get
+ * "Move up" / "Move down" actions instead.
+ *
+ * A plain Column (not a nested lazy list with a fixed height), so it scrolls
+ * with the rest of the screen.
  */
 @Composable
 fun ReorderableSongList(
@@ -50,24 +65,87 @@ fun ReorderableSongList(
     onReorder: (fromIndex: Int, toIndex: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxWidth().height(500.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    // Local order while dragging; replaced when the saved order comes back.
+    var order by remember(songs) { mutableStateOf(songs) }
+    var draggingId by remember { mutableStateOf<Int?>(null) }
+    var dragStartIndex by remember { mutableIntStateOf(-1) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    var rowHeightPx by remember { mutableIntStateOf(0) }
+    val spacingPx = with(LocalDensity.current) { RowSpacing.toPx() }
+    val playingId = songs.getOrNull(currentPlayingIndex)?.id
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(RowSpacing)
     ) {
-        itemsIndexed(
-            items = songs,
-            key = { _, song -> song.id }
-        ) { index, song ->
-            ReorderableSongRow(
-                song = song,
-                index = index,
-                totalSongs = songs.size,
-                isPlaying = index == currentPlayingIndex,
-                onClick = { onTrackSelected(index) },
-                onMoveUp = { if (index > 0) onReorder(index, index - 1) },
-                onMoveDown = { if (index < songs.size - 1) onReorder(index, index + 1) },
-                modifier = Modifier.fillMaxWidth().animateItem()
-            )
+        order.forEachIndexed { index, song ->
+            key(song.id) {
+                val dragging = song.id == draggingId
+                ReorderableSongRow(
+                    song = song,
+                    position = index + 1,
+                    isPlaying = song.id == playingId,
+                    dragging = dragging,
+                    onClick = { onTrackSelected(songs.indexOfFirst { it.id == song.id }) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { rowHeightPx = it.height }
+                        .zIndex(if (dragging) 1f else 0f)
+                        .graphicsLayer {
+                            translationY = if (dragging) dragOffset else 0f
+                            val s = if (dragging) 1.02f else 1f
+                            scaleX = s
+                            scaleY = s
+                        }
+                        .semantics {
+                            customActions = buildList {
+                                if (index > 0) add(CustomAccessibilityAction("Move up") {
+                                    onReorder(index, index - 1); true
+                                })
+                                if (index < order.lastIndex) add(CustomAccessibilityAction("Move down") {
+                                    onReorder(index, index + 1); true
+                                })
+                            }
+                        },
+                    handleModifier = Modifier
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .pointerInput(song.id) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    draggingId = song.id
+                                    dragStartIndex = order.indexOfFirst { it.id == song.id }
+                                    dragOffset = 0f
+                                },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    dragOffset += amount.y
+                                    val step = rowHeightPx + spacingPx
+                                    val current = order.indexOfFirst { it.id == song.id }
+                                    // Past half a row: swap with the neighbour, and shift
+                                    // the offset so the row stays under the pointer.
+                                    if (dragOffset > step / 2 && current < order.lastIndex) {
+                                        order = order.toMutableList().apply { add(current + 1, removeAt(current)) }
+                                        dragOffset -= step
+                                    } else if (dragOffset < -step / 2 && current > 0) {
+                                        order = order.toMutableList().apply { add(current - 1, removeAt(current)) }
+                                        dragOffset += step
+                                    }
+                                },
+                                onDragEnd = {
+                                    val to = order.indexOfFirst { it.id == song.id }
+                                    if (dragStartIndex >= 0 && to != dragStartIndex) onReorder(dragStartIndex, to)
+                                    draggingId = null
+                                    dragOffset = 0f
+                                },
+                                onDragCancel = {
+                                    order = songs
+                                    draggingId = null
+                                    dragOffset = 0f
+                                }
+                            )
+                        }
+                )
+            }
         }
     }
 }
@@ -75,99 +153,74 @@ fun ReorderableSongList(
 @Composable
 private fun ReorderableSongRow(
     song: Song,
-    index: Int,
-    totalSongs: Int,
+    position: Int,
     isPlaying: Boolean,
+    dragging: Boolean,
     onClick: () -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
+    handleModifier: Modifier,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    ShadowBox(
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isPlaying) itemsBg.copy(alpha = 0.8f) else itemsBg
-        ),
-        shape = RoundedCornerShape(8.dp)
+        shadowOffsetX = if (dragging) 6.dp else 3.dp,
+        shadowOffsetY = if (dragging) 6.dp else 3.dp,
+        borderThickness = 2.dp
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(start = 4.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.width(40.dp)
-            ) {
-                IconButton(
-                    onClick = onMoveUp,
-                    enabled = index > 0,
-                    modifier = Modifier.size(32.dp).handCursor()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Move up",
-                        tint = if (index > 0) cardBorder else cardBorder.copy(alpha = 0.3f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = onMoveDown,
-                    enabled = index < totalSongs - 1,
-                    modifier = Modifier.size(32.dp).handCursor()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Move down",
-                        tint = if (index < totalSongs - 1) cardBorder else cardBorder.copy(alpha = 0.3f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            ArtImage(
-                path = song.artPath,
-                contentDescription = song.name,
-                modifier = Modifier
-                    .size(48.dp)
-                    .aspectRatio(1f)
-                    .handCursor()
-                    .clickable(onClick = onClick)
+            Icon(
+                imageVector = Icons.Outlined.DragHandle,
+                contentDescription = null,
+                tint = cardBorder,
+                modifier = handleModifier
+                    .padding(8.dp)
+                    .size(24.dp)
             )
 
-            Column(
+            Row(
                 modifier = Modifier
                     .weight(1f)
                     .handCursor()
-                    .clickable(onClick = onClick)
+                    .clickable(onClick = onClick),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = song.name,
-                    color = if (isPlaying) accentColor2 else text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                ArtImage(
+                    path = song.artPath,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(3.dp))
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${Formatter.formatTime(song.length)} · ${playCountOf(song)} plays",
-                    color = text.copy(alpha = 0.6f),
-                    style = MaterialTheme.typography.labelSmall,
-                    letterSpacing = 0.5.sp
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = SongDisplay.title(song),
+                        color = text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isPlaying) FontWeight.ExtraBold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (isPlaying) "Now playing"
+                        else listOfNotNull(SongDisplay.artist(song), Formatter.formatTime(song.length))
+                            .joinToString(" · "),
+                        color = textSecondary,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             }
 
             Text(
-                text = "${index + 1}",
-                color = cardBorder.copy(alpha = 0.6f),
+                text = "$position",
+                color = textSecondary,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(end = 8.dp)
+                fontWeight = FontWeight.ExtraBold
             )
         }
     }

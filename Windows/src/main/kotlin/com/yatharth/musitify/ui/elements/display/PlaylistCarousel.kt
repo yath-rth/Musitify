@@ -1,21 +1,14 @@
 package com.yatharth.musitify.ui.elements.display
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,19 +18,16 @@ import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.ui.elements.ArtImage
 import com.yatharth.musitify.ui.elements.ShadowBox
-import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
 
-private const val ADD_PLAYLIST_KEY = "add_playlist"
-
 /**
- * Cover-flow of playlists plus a trailing "CREATE PLAYLIST" card.
+ * Cover-flow of playlists. Creating a playlist is a button in the section header now,
+ * not a card in the row (as on Android).
  *
- * [currentPlayingIndex] is a list **index** (Android passed the selected playlist id here
- * and also scrolled to `playlist.id` on side taps — both fixed on desktop).
- * Tap centred ⇒ [onPlaylistSelected] with the playlist **id**; tap side ⇒ scroll to it;
- * long press / right click ⇒ [onLongClick]. The create card reacts to any tap.
+ * [currentPlayingIndex] is a list **index**. Tap centred ⇒ [onPlaylistSelected] with the
+ * playlist **id**; tap side ⇒ scroll to it; long press / right click ⇒ [onLongClick].
  */
 @Composable
 fun PlaylistCarousel(
@@ -45,31 +35,25 @@ fun PlaylistCarousel(
     currentPlayingIndex: Int,
     onPlaylistSelected: (Int) -> Unit,
     onLongClick: (Playlist) -> Unit,
-    onCreatePlaylist: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val itemWidth = 200.dp
     CoverFlowCarousel(
-        itemCount = playlists.size + 1,
-        itemWidth = itemWidth,
-        itemHeight = itemWidth + 64.dp,
+        itemCount = playlists.size,
+        itemWidth = 200.dp,
         spacing = (-20).dp,
         focusIndex = currentPlayingIndex,
-        key = { index -> if (index < playlists.size) playlists[index].playlist.id else ADD_PLAYLIST_KEY },
-        onSelect = { index ->
-            if (index < playlists.size) onPlaylistSelected(playlists[index].playlist.id)
-            else onCreatePlaylist()
-        },
-        onContext = { index -> if (index < playlists.size) onLongClick(playlists[index].playlist) },
-        hasContext = { index -> index < playlists.size },
-        selectsOffCentre = { index -> index >= playlists.size },
+        key = { index -> playlists[index].playlist.id },
+        onSelect = { index -> onPlaylistSelected(playlists[index].playlist.id) },
+        onContext = { index -> onLongClick(playlists[index].playlist) },
         modifier = modifier,
     ) { index ->
-        if (index < playlists.size) {
-            PlaylistArt(playlists[index], modifier = Modifier.fillMaxSize())
-        } else {
-            AddPlaylistCard(modifier = Modifier.fillMaxSize())
-        }
+        PlaylistArt(
+            playlists[index],
+            modifier = Modifier
+                .fillMaxWidth()
+                // Room for the 4dp hard shadow, which the row would clip.
+                .padding(end = 4.dp, bottom = 6.dp)
+        )
     }
 }
 
@@ -80,13 +64,15 @@ fun PlaylistArt(
 ) {
     ShadowBox(
         modifier = modifier,
-        shadowOffsetX = 0.dp,
-        shadowOffsetY = 0.dp,
-        borderThickness = 6.dp,
+        shadowOffsetX = 4.dp,
+        shadowOffsetY = 4.dp,
+        borderThickness = 2.dp,
         rounding = 5
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
         ) {
             playlist.playlist.artPath?.let {
                 ArtImage(
@@ -105,59 +91,19 @@ fun PlaylistArt(
                 color = text,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Normal,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = "${playlist.numOfSongs} songs • ${
-                    Formatter.formatTimeToMinutes(playlist.playlistLength)
-                }",
-                color = text.copy(alpha = 0.6f),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.ExtraLight,
-                letterSpacing = 0.5.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-        }
-    }
-}
-
-@Composable
-fun AddPlaylistCard(
-    modifier: Modifier
-) {
-    ShadowBox(
-        modifier = modifier,
-        shadowOffsetX = 0.dp,
-        shadowOffsetY = 0.dp,
-        borderThickness = 6.dp,
-        rounding = 5,
-        bgColor = accentColor2.copy(alpha = 0.1f)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Add,
-                contentDescription = "Create playlist",
-                modifier = Modifier.size(64.dp),
-                tint = accentColor2
-            )
-
-            Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "CREATE PLAYLIST",
-                color = accentColor2,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.5.sp
+                text = "${Formatter.count(playlist.numOfSongs, "song")} • ${
+                    Formatter.formatTimeToMinutes(playlist.playlistLength)
+                }",
+                color = textSecondary,
+                style = MaterialTheme.typography.labelSmall,
+                letterSpacing = 0.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

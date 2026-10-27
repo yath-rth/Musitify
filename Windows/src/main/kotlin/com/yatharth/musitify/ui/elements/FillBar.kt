@@ -47,7 +47,7 @@ import kotlin.math.abs
 
 /**
  * Labelled hard-shadow progress bar (playback progress, stat shares).
- * `max <= 0` ⇒ the bar is shown FULL (Android behaviour).
+ * `max <= 0` (e.g. no song loaded) ⇒ an empty bar, not a full one.
  *
  * Desktop: when [onSeek] is non-null the bar is seekable — click or drag on it;
  * the fill follows the pointer while dragging and [onSeek] is called with the
@@ -64,7 +64,7 @@ fun FillBar(
     bgColor: Color = secondaryBg,
     onSeek: ((Float) -> Unit)? = null,
 ) {
-    val progress = if (max > 0) (abs(value) / max).coerceIn(0.0, 1.0).toFloat() else 1f
+    val progress = if (max > 0) (abs(value) / max).coerceIn(0.0, 1.0).toFloat() else 0f
 
     val animatedProgress = remember { Animatable(progress) }
     var dragging by remember { mutableStateOf(false) }
