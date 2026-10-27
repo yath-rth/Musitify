@@ -1,10 +1,17 @@
 package com.yatharth.musitify.ui.screens
 
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.Icons
+import com.yatharth.musitify.ui.elements.LoadingState
+import com.yatharth.musitify.ui.elements.EmptyState
+import com.yatharth.musitify.util.SongDisplay
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -52,125 +59,111 @@ import com.yatharth.musitify.ui.theme.background
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
 import java.io.File
 import java.util.Calendar
 
+/**
+ * The Stats tab. Rendered inside the home screen's frame, so it shares the
+ * header tabs and the mini player instead of drawing its own copy of the bar.
+ */
 @Composable
-fun StatsScreen(
+fun StatsContent(
+    contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
-    onClose: () -> Unit = {},
-    playbackControllerViewModel: PlaybackControllerViewModel = hiltViewModel(),
     statsViewModel: StatsViewModel = hiltViewModel()
 ) {
-    val uiState by playbackControllerViewModel.uiState.collectAsState()
-    val stats by statsViewModel.stats.collectAsState()
-    val sleepTimerState by playbackControllerViewModel.sleepTimerState.collectAsState()
+    val loaded by statsViewModel.stats.collectAsState()
 
     LaunchedEffect(Unit) { statsViewModel.refresh() }
 
-    BackHandler(onBack = onClose)
+    val stats = loaded ?: run {
+        LoadingStatsCard(contentPadding)
+        return
+    }
 
-    androidx.compose.material3.Scaffold(
+    LazyColumn(
         modifier = modifier.fillMaxSize(),
-        containerColor = background,
-        bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding(),
-                horizontalAlignment = Alignment.End
-            ) {
-                PlaybackControls(
-                    modifier = Modifier.fillMaxWidth(),
-                    uiState = uiState,
-                    onBack = { playbackControllerViewModel.previous() },
-                    onPause = { playbackControllerViewModel.pause() },
-                    onNext = { playbackControllerViewModel.next() },
-                    onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
-                    onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
-                    addSong = {},
-                    createPlaylist = {},
-                    onStats = onClose,
-                    onSleepTimer = {},
-                    sleepTimerActive = sleepTimerState.isActive
-                )
-            }
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        contentPadding = PaddingValues(
+            start = 12.dp,
+            end = 12.dp,
+            top = contentPadding.calculateTopPadding() + 8.dp,
+            bottom = contentPadding.calculateBottomPadding() + 8.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        if (!stats.hasAnyListenTime) {
+            item { EmptyStatsCard() }
+        } else if (stats.isEarly) {
+            // Rows of zeros and a one-bar chart read as failure; show a simpler
+            // view until there's enough history for trends.
+            item { GettingStartedCard(stats) }
+            item { StreakCard(stats) }
             item {
-                Text(
-                    text = "YOUR STATS",
-                    color = text,
-                    style = adaptiveTypography().labelLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 2.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                TopListCard(
+                    title = "MOST PLAYED SO FAR",
+                    subtitle = "your top songs fill in as you listen",
+                    emptyLabel = "Keep listening to fill this up",
+                    hasData = stats.topSongsAllTime.isNotEmpty()
+                ) {
+                    stats.topSongsAllTime.forEachIndexed { index, song ->
+                        SongStatRow(index, song, stats.topSongsAllTime.firstOrNull()?.totalMs ?: 0)
+                    }
+                }
             }
-
-            if (!stats.hasAnyListenTime) {
-                item { EmptyStatsCard() }
-            } else {
-                item { HeroTotalsCard(stats) }
-                item { InsightsCardsRow(stats) }
-                item { PeriodCardsRow(stats) }
-                if (stats.dailySeries.any { it.totalMs > 0 }) {
-                    item { ListeningChartCard(stats.dailySeries) }
-                }
-                item {
-                    TopListCard(
-                        title = "TOP SONGS · THIS MONTH",
-                        subtitle = "your most-played tracks lately",
-                        emptyLabel = "No listens this month yet",
-                        hasData = stats.topSongsThisMonth.isNotEmpty()
-                    ) {
-                        stats.topSongsThisMonth.forEachIndexed { index, song ->
-                            SongStatRow(index, song, stats.topSongsThisMonth.firstOrNull()?.totalMs ?: 0)
-                        }
+        } else {
+            item { HeroTotalsCard(stats) }
+            item { InsightsCardsRow(stats) }
+            item { PeriodCardsRow(stats) }
+            if (stats.dailySeries.any { it.totalMs > 0 }) {
+                item { ListeningChartCard(stats.dailySeries) }
+            }
+            item {
+                TopListCard(
+                    title = "TOP SONGS · LAST 30 DAYS",
+                    subtitle = "your most-played tracks lately",
+                    emptyLabel = "No listens in the last 30 days",
+                    hasData = stats.topSongsThisMonth.isNotEmpty()
+                ) {
+                    stats.topSongsThisMonth.forEachIndexed { index, song ->
+                        SongStatRow(index, song, stats.topSongsThisMonth.firstOrNull()?.totalMs ?: 0)
                     }
                 }
-                item {
-                    TopListCard(
-                        title = "TOP SONGS · ALL TIME",
-                        subtitle = "your most-played tracks ever",
-                        emptyLabel = "Keep listening to fill this up",
-                        hasData = stats.topSongsAllTime.isNotEmpty()
-                    ) {
-                        stats.topSongsAllTime.forEachIndexed { index, song ->
-                            SongStatRow(index, song, stats.topSongsAllTime.firstOrNull()?.totalMs ?: 0)
-                        }
+            }
+            item {
+                TopListCard(
+                    title = "TOP SONGS · ALL TIME",
+                    subtitle = "your most-played tracks ever",
+                    emptyLabel = "Keep listening to fill this up",
+                    hasData = stats.topSongsAllTime.isNotEmpty()
+                ) {
+                    stats.topSongsAllTime.forEachIndexed { index, song ->
+                        SongStatRow(index, song, stats.topSongsAllTime.firstOrNull()?.totalMs ?: 0)
                     }
                 }
-                item {
-                    TopListCard(
-                        title = "TOP ARTISTS",
-                        subtitle = "artists you listen to the most",
-                        emptyLabel = "No artist data yet",
-                        hasData = stats.topArtists.isNotEmpty()
-                    ) {
-                        stats.topArtists.forEachIndexed { index, artist ->
-                            ArtistStatRow(index, artist, stats.topArtists.firstOrNull()?.totalMs ?: 0)
-                        }
+            }
+            item {
+                TopListCard(
+                    title = "TOP ARTISTS",
+                    subtitle = "artists you listen to the most",
+                    emptyLabel = "No artist data yet",
+                    hasData = stats.topArtists.isNotEmpty()
+                ) {
+                    stats.topArtists.forEachIndexed { index, artist ->
+                        ArtistStatRow(index, artist, stats.topArtists.firstOrNull()?.totalMs ?: 0)
                     }
                 }
-                item {
-                    TopListCard(
-                        title = "TOP PLAYLISTS",
-                        subtitle = "playlists you play the most",
-                        emptyLabel = "Play a playlist to see its stats here",
-                        hasData = stats.topPlaylists.isNotEmpty()
-                    ) {
-                        stats.topPlaylists.forEachIndexed { index, playlist ->
-                            PlaylistStatRow(index, playlist, stats.topPlaylists.firstOrNull()?.totalMs ?: 0)
-                        }
+            }
+            item {
+                TopListCard(
+                    title = "TOP PLAYLISTS",
+                    subtitle = "playlists you play the most",
+                    emptyLabel = "Play a playlist to see its stats here",
+                    hasData = stats.topPlaylists.isNotEmpty()
+                ) {
+                    stats.topPlaylists.forEachIndexed { index, playlist ->
+                        PlaylistStatRow(index, playlist, stats.topPlaylists.firstOrNull()?.totalMs ?: 0)
                     }
                 }
             }
@@ -178,28 +171,96 @@ fun StatsScreen(
     }
 }
 
+/** Less than 3 days with listening, or under an hour in total. */
+private val StatsSnapshot.isEarly: Boolean
+    get() = dailySeries.count { it.totalMs > 0 } < 3 || totalListenMs < 60 * 60_000L
+
 @Composable
-private fun EmptyStatsCard() {
-    ShadowBox(
-        modifier = Modifier.fillMaxWidth(),
-        alignment = Alignment.TopStart
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+private fun GettingStartedCard(stats: StatsSnapshot) {
+    ShadowBox(modifier = Modifier.fillMaxWidth(), alignment = Alignment.TopStart) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "NO LISTENING HISTORY YET",
+                text = "GETTING STARTED",
                 color = text,
                 style = adaptiveTypography().labelSmall,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.5.sp
+                fontWeight = FontWeight.ExtraBold
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Play any song and your listening stats — total time, top songs, favourite playlists — will show up here, just like Spotify Wrapped.",
-                color = text.copy(alpha = 0.7f),
+                text = "${Formatter.formatListenTime(stats.totalListenMs)} listened",
+                color = accentColor1,
+                style = adaptiveTypography().titleMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Across ${Formatter.count(stats.totalSessions, "session")}. Trends, your top artists " +
+                        "and playlists show up here after a few days of listening.",
+                color = textSecondary,
                 style = adaptiveTypography().bodySmall
             )
         }
     }
+}
+
+/** Current streak plus the last seven days as filled / empty dots. */
+@Composable
+private fun StreakCard(stats: StatsSnapshot, modifier: Modifier = Modifier.fillMaxWidth()) {
+    val lastWeek = stats.dailySeries.takeLast(7)
+    ShadowBox(modifier = modifier, alignment = Alignment.CenterStart) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "STREAK",
+                color = textSecondary,
+                style = adaptiveTypography().labelSmall
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = Formatter.count(stats.currentStreak, "day"),
+                color = text,
+                style = adaptiveTypography().headlineMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                lastWeek.forEach { day ->
+                    val listened = day.totalMs > 0
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(if (listened) accentColor1 else Color.Transparent)
+                            .border(1.5.dp, cardBorder, RoundedCornerShape(3.dp))
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = if (stats.currentStreak > 0 && stats.todayListenMs == 0L)
+                    "play today to keep it going"
+                else "last 7 days · best ${stats.longestStreak}",
+                color = textSecondary,
+                style = adaptiveTypography().labelSmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoadingStatsCard(contentPadding: PaddingValues) {
+    LoadingState(
+        label = "Adding up your listening…",
+        modifier = Modifier.padding(top = contentPadding.calculateTopPadding())
+    )
+}
+
+@Composable
+private fun EmptyStatsCard() {
+    EmptyState(
+        title = "No listening history yet",
+        message = "Play any song and your listening time, top songs and favourite playlists show up here.",
+        icon = Icons.Outlined.Insights
+    )
 }
 
 @Composable
@@ -232,13 +293,13 @@ private fun HeroTotalsCard(stats: StatsSnapshot) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "${stats.totalSessions} sessions",
-                    color = text.copy(alpha = 0.6f),
+                    text = Formatter.count(stats.totalSessions, "session"),
+                    color = textSecondary,
                     style = adaptiveTypography().bodySmall
                 )
                 Text(
                     text = "avg ${Formatter.formatListenTime(stats.averageSessionMs)}/session",
-                    color = text.copy(alpha = 0.6f),
+                    color = textSecondary,
                     style = adaptiveTypography().bodySmall
                 )
             }
@@ -252,21 +313,14 @@ private fun InsightsCardsRow(stats: StatsSnapshot) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        InsightCard(
-            modifier = Modifier.weight(1f),
-            label = "STREAK",
-            value = "${stats.currentStreak}",
-            sub = "current · ${stats.longestStreak} longest",
-            color = accentColor1,
-            icon = "🔥"
-        )
+        StreakCard(stats, modifier = Modifier.weight(1f))
         InsightCard(
             modifier = Modifier.weight(1f),
             label = "COMPLETION",
             value = "${stats.completionRate.toInt()}%",
             sub = "songs finished",
-            color = accentColor2,
-            icon = "✓"
+            color = text,
+            icon = ""
         )
     }
 }
@@ -281,21 +335,21 @@ private fun PeriodCardsRow(stats: StatsSnapshot) {
             modifier = Modifier.weight(1f),
             label = "TODAY",
             value = Formatter.formatListenTime(stats.todayListenMs),
-            sub = if (stats.listensToday > 0) "${stats.listensToday} sessions" else "no listens",
+            sub = if (stats.listensToday > 0) Formatter.count(stats.listensToday, "session") else "no listens",
             color = accentColor1
         )
         PeriodCard(
             modifier = Modifier.weight(1f),
-            label = "THIS WEEK",
+            label = "LAST 7 DAYS",
             value = Formatter.formatListenTime(stats.thisWeekListenMs),
             sub = "avg ${Formatter.formatListenTime(stats.thisWeekListenMs / 7)}/day",
             color = accentColor2
         )
         PeriodCard(
             modifier = Modifier.weight(1f),
-            label = "THIS MONTH",
+            label = "LAST 30 DAYS",
             value = Formatter.formatListenTime(stats.thisMonthListenMs),
-            sub = "${stats.listensThisMonth} sessions",
+            sub = Formatter.count(stats.listensThisMonth, "session"),
             color = accentColor3
         )
     }
@@ -324,13 +378,14 @@ private fun InsightCard(
                     text = label,
                     color = text.copy(alpha = 0.7f),
                     style = adaptiveTypography().labelSmall,
-                    fontWeight = FontWeight.ExtraLight,
                     letterSpacing = 1.sp
                 )
-                Text(
-                    text = icon,
-                    style = adaptiveTypography().bodyMedium
-                )
+                if (icon.isNotEmpty()) {
+                    Text(
+                        text = icon,
+                        style = adaptiveTypography().bodyMedium
+                    )
+                }
             }
             Spacer(Modifier.height(4.dp))
             Text(
@@ -344,7 +399,7 @@ private fun InsightCard(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = sub,
-                color = text.copy(alpha = 0.5f),
+                color = textSecondary,
                 style = adaptiveTypography().labelSmall
             )
         }
@@ -368,7 +423,6 @@ private fun PeriodCard(
                 text = label,
                 color = text.copy(alpha = 0.7f),
                 style = adaptiveTypography().labelSmall,
-                fontWeight = FontWeight.ExtraLight,
                 letterSpacing = 1.sp
             )
             Spacer(Modifier.height(4.dp))
@@ -380,19 +434,11 @@ private fun PeriodCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .height(4.dp)
-                    .width(28.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(color)
-            )
             sub?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = it,
-                    color = text.copy(alpha = 0.5f),
+                    color = textSecondary,
                     style = adaptiveTypography().labelSmall
                 )
             }
@@ -454,7 +500,7 @@ private fun ListeningBarChart(series: List<DailyStat>) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = Formatter.formatDayNumber(dayOfMonth(day.dayStartMs)),
-                    color = text.copy(alpha = 0.5f),
+                    color = textSecondary,
                     style = adaptiveTypography().labelSmall,
                     fontSize = 9.sp
                 )
@@ -486,7 +532,7 @@ private fun TopListCard(
             Spacer(Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = text.copy(alpha = 0.6f),
+                color = textSecondary,
                 style = adaptiveTypography().bodySmall
             )
             Spacer(Modifier.height(12.dp))
@@ -495,7 +541,7 @@ private fun TopListCard(
             else {
                 Text(
                     text = emptyLabel,
-                    color = text.copy(alpha = 0.5f),
+                    color = textSecondary,
                     style = adaptiveTypography().bodySmall
                 )
             }
@@ -507,9 +553,9 @@ private fun TopListCard(
 private fun SongStatRow(index: Int, song: SongStat, maxMs: Long) {
     StatRowBase(
         rank = index,
-        title = song.name,
+        title = SongDisplay.title(song.name, song.artistName),
         subtitle = song.artistName,
-        valueLabel = "${Formatter.formatListenTime(song.totalMs)} · ${song.fullPlays} plays",
+        valueLabel = "${Formatter.formatListenTime(song.totalMs)} · ${Formatter.count(song.fullPlays, "play")}",
         shareValue = song.totalMs.toDouble(),
         shareMax = if (maxMs > 0) maxMs.toDouble() else 1.0,
         color = accentColor1
@@ -531,11 +577,11 @@ private fun ArtistStatRow(index: Int, artist: ArtistStat, maxMs: Long) {
     StatRowBase(
         rank = index,
         title = artist.name,
-        subtitle = "${artist.songCount} songs",
+        subtitle = Formatter.count(artist.songCount, "song"),
         valueLabel = Formatter.formatListenTime(artist.totalMs),
         shareValue = artist.totalMs.toDouble(),
         shareMax = if (maxMs > 0) maxMs.toDouble() else 1.0,
-        color = accentColor2
+        color = accentColor1
     ) {
         Box(
             modifier = Modifier
@@ -559,11 +605,11 @@ private fun PlaylistStatRow(index: Int, playlist: PlaylistStat, maxMs: Long) {
     StatRowBase(
         rank = index,
         title = playlist.name,
-        subtitle = "${playlist.sessionCount} sessions",
+        subtitle = Formatter.count(playlist.sessionCount, "session"),
         valueLabel = Formatter.formatListenTime(playlist.totalMs),
         shareValue = playlist.totalMs.toDouble(),
         shareMax = if (maxMs > 0) maxMs.toDouble() else 1.0,
-        color = accentColor3
+        color = accentColor1
     ) {
         Box(
             modifier = Modifier
@@ -601,7 +647,7 @@ private fun StatRowBase(
     ) {
         Text(
             text = "${rank + 1}",
-            color = text.copy(alpha = 0.5f),
+            color = textSecondary,
             style = adaptiveTypography().labelLarge,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.width(28.dp)
@@ -622,7 +668,7 @@ private fun StatRowBase(
             )
             Text(
                 text = subtitle,
-                color = text.copy(alpha = 0.6f),
+                color = textSecondary,
                 style = adaptiveTypography().labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

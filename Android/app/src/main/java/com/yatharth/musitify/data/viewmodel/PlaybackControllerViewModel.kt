@@ -9,8 +9,6 @@ import com.yatharth.musitify.service.SleepTimerDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
-//TODO: Interact with fillbar to change the position of what you are hearing in the music track
-
 @HiltViewModel
 class PlaybackControllerViewModel @Inject constructor(
     private val mediaControllerRepository: MediaControllerRepository
@@ -22,6 +20,13 @@ class PlaybackControllerViewModel @Inject constructor(
 
     fun playSongs(songs: List<Song>, startIndex: Int, playlistId: Int?) {
         mediaControllerRepository.startPlayback(songs, startIndex, playlistId)
+    }
+
+    /** Starts the list at a random song with shuffle on. */
+    fun playShuffled(songs: List<Song>, playlistId: Int?) {
+        if (songs.isEmpty()) return
+        mediaControllerRepository.startPlayback(songs, songs.indices.random(), playlistId)
+        controller.value?.shuffleModeEnabled = true
     }
 
     fun toggleRepeatMode() {
@@ -54,8 +59,16 @@ class PlaybackControllerViewModel @Inject constructor(
         controller.value?.seekToPrevious()
     }
 
+    fun seekTo(positionMs: Long) {
+        mediaControllerRepository.seekTo(positionMs)
+    }
+
     fun startSleepTimer(duration: SleepTimerDuration) {
         mediaControllerRepository.startSleepTimer(duration)
+    }
+
+    fun startSleepAtEndOfSong() {
+        mediaControllerRepository.startSleepAtEndOfSong()
     }
 
     fun cancelSleepTimer() {

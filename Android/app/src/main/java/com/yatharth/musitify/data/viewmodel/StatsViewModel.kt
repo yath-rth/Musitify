@@ -8,7 +8,9 @@ import com.yatharth.musitify.data.repository.StatsComputer
 import com.yatharth.musitify.data.repository.StatsRepository
 import com.yatharth.musitify.data.repository.StatsSnapshot
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -28,15 +30,21 @@ class StatsViewModel @Inject constructor(
         0L
     )
 
-    val stats: StateFlow<StatsSnapshot> = combine(
+    /**
+     * Null until the first computation finishes, so the screen can show
+     * "loading" instead of an empty snapshot that looks like no history.
+     * Computed off the main thread: there can be tens of thousands of
+     * sessions, and a new one arrives every ~7s while music plays.
+     */
+    val stats: StateFlow<StatsSnapshot?> = combine(
         statsRepository.sessions,
         refreshTrigger
     ) { sessions, _ ->
         StatsComputer.compute(sessions, System.currentTimeMillis())
-    }.stateIn(
+    }.flowOn(Dispatchers.Default).stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5000),
-        StatsSnapshot()
+        null
     )
 
     init {

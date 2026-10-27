@@ -23,6 +23,7 @@ fun ShadowBox(
     shadowOffsetX: Dp = 4.dp,
     shadowOffsetY: Dp = 4.dp,
     borderThickness: Dp = 2.dp,
+    // Corner radius in dp. (Was passed to RoundedCornerShape(Int), which reads it as a percent.)
     rounding: Int = 5,
     offset: Dp = 0.dp,
     alignment: Alignment = Alignment.Center,
@@ -38,7 +39,7 @@ fun ShadowBox(
                 modifier = Modifier
                     .matchParentSize()
                     .offset(shadowOffsetX, shadowOffsetY)
-                    .background(cardBorder, RoundedCornerShape(rounding))
+                    .background(cardBorder, RoundedCornerShape(rounding.dp))
             )
         }
 
@@ -46,8 +47,8 @@ fun ShadowBox(
             modifier = Modifier
                 .fillMaxWidth()
                 .offset(offset, offset)
-                .background(bgColor, RoundedCornerShape(rounding))
-                .border(borderThickness, text, RoundedCornerShape(rounding)),
+                .background(bgColor, RoundedCornerShape(rounding.dp))
+                .border(borderThickness, text, RoundedCornerShape(rounding.dp)),
             contentAlignment = alignment
         ) {
             content()

@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.elements.display
 
+import com.yatharth.musitify.util.SongDisplay
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -41,6 +42,7 @@ import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import kotlinx.coroutines.launch
@@ -97,8 +99,8 @@ fun MusicCarousel(
             val distanceFromCenter = if (abs(rawDistance) < threshold) 0f else rawDistance
 
             val scaleTarget = lerp(1f, 0.75f, abs(distanceFromCenter))
-            val rotationTarget = lerp(0f, 45f, distanceFromCenter)
-            val alphaTarget = lerp(1f, 0.5f, abs(distanceFromCenter))
+            val rotationTarget = lerp(0f, 25f, distanceFromCenter)
+            val alphaTarget = lerp(1f, 0.75f, abs(distanceFromCenter))
             val isNearCenter = abs(distanceFromCenter) < 0.15f
 
             val isPlaying = index == currentPlayingIndex
@@ -106,7 +108,6 @@ fun MusicCarousel(
             Box(
                 modifier = Modifier
                     .width(itemWidth)
-                    .height(itemWidth + 80.dp)
                     .graphicsLayer {
                         scaleX = scaleTarget
                         scaleY = scaleTarget
@@ -129,7 +130,10 @@ fun MusicCarousel(
                         }
                     )
             ) {
-                AlbumArt(song, modifier = Modifier.fillMaxSize(), isPlaying = isPlaying)
+                AlbumArt(song, modifier = Modifier
+                    .fillMaxWidth()
+                    // Room for the 4dp hard shadow, which the row would clip.
+                    .padding(end = 4.dp, bottom = 6.dp), isPlaying = isPlaying)
             }
         }
     }
@@ -159,13 +163,15 @@ fun AlbumArt(
 
     ShadowBox(
         modifier = modifier,
-        shadowOffsetX = 0.dp,
-        shadowOffsetY = 0.dp,
-        borderThickness = 6.dp,
+        shadowOffsetX = 4.dp,
+        shadowOffsetY = 4.dp,
+        borderThickness = 2.dp,
         rounding = 5
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
         ) {
             AsyncImage(
                 model = artwork,
@@ -179,21 +185,29 @@ fun AlbumArt(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = song.name,
-                maxLines = 2,
+                text = SongDisplay.title(song),
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = adaptiveTypography().bodyMedium,
                 color = text,
                 fontWeight = FontWeight.Normal
             )
+            SongDisplay.artist(song)?.let {
+                Text(
+                    text = it,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = adaptiveTypography().bodySmall,
+                    color = textSecondary
+                )
+            }
 
             Text(
-                text = Formatter.formatTime(song.length) + " \u2022 " + playCountOf(song) + " plays",
+                text = Formatter.formatTime(song.length) + " \u2022 " + Formatter.count(playCountOf(song), "play"),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = adaptiveTypography().labelSmall,
-                color = text.copy(alpha = 0.6f),
-                fontWeight = FontWeight.ExtraLight,
+                color = textSecondary,
                 letterSpacing = 0.5.sp
             )
         }

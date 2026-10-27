@@ -15,6 +15,13 @@ val cardBorder = Color(0xFF1A1A2E)     // warm gray for card outlines
 val dividerColor = Color(0xFFCCC7BE)     // for the date dividers
 val accentColor3 = Color(0xFFE7C277)
 
+// Semantic roles. Use these instead of the raw accents so colour keeps one meaning:
+// green = the main action, red = destructive or error only.
+val primaryAction = accentColor2
+val danger = accentColor1
+// Secondary text (metadata, captions, hints): Tracknix uses text at 70%.
+val textSecondary = text.copy(alpha = 0.7f)
+
 val categoryColors = mapOf(
     "Food"          to Color(0xFF1B1B38), // Navy
     "Groceries"     to Color(0xFFB56C8A), // Muted Pink

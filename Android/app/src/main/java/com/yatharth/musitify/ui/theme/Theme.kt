@@ -11,9 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 val DarkColorScheme = darkColorScheme(
-    primary = accentColor1,
+    primary = text,
     onPrimary = itemsBg,
-    primaryContainer = accentColor1.copy(alpha = 0.2f),
+    primaryContainer = accentColor2.copy(alpha = 0.2f),
     onPrimaryContainer = text,
     secondary = accentColor2,
     onSecondary = itemsBg,
@@ -21,6 +21,7 @@ val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = text,
     tertiary = accentColor3,
     onTertiary = text,
+    error = danger,
     background = background,
     onBackground = text,
     surface = itemsBg,
@@ -32,9 +33,9 @@ val DarkColorScheme = darkColorScheme(
 )
 
 val LightColorScheme = lightColorScheme(
-    primary = accentColor1,
+    primary = text,
     onPrimary = itemsBg,
-    primaryContainer = accentColor1.copy(alpha = 0.2f),
+    primaryContainer = accentColor2.copy(alpha = 0.2f),
     onPrimaryContainer = text,
     secondary = accentColor2,
     onSecondary = itemsBg,
@@ -42,6 +43,7 @@ val LightColorScheme = lightColorScheme(
     onSecondaryContainer = text,
     tertiary = accentColor3,
     onTertiary = text,
+    error = danger,
     background = background,
     onBackground = text,
     surface = itemsBg,

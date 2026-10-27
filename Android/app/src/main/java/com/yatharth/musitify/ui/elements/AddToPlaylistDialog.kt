@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -23,6 +22,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +43,7 @@ import com.yatharth.musitify.ui.theme.checkBoxColors
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.secondaryBg
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 
 @Composable
 fun AddToPlaylistDialog(
@@ -62,7 +66,7 @@ fun AddToPlaylistDialog(
     state: PlaylistDialogUiState,
     onSubmit: () -> Unit
 ) {
-    AlertDialog(
+    MusitifyDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -82,52 +86,48 @@ fun AddToPlaylistDialog(
                     fontWeight = FontWeight.Medium
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isAddToExistingMode) "ADD TO EXISTING" else "CREATE NEW",
-                        style = adaptiveTypography().labelSmall,
-                        color = text.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.ExtraLight,
-                        letterSpacing = 1.2.sp
-                    )
-                    CustomSwitch(
-                        checked = isAddToExistingMode,
-                        onCheckedChange = onModeChange
-                    )
-                }
+                // Both choices visible and labelled, instead of a switch whose
+                // label flipped to describe its current state.
+                SegmentedControl(
+                    options = listOf("EXISTING", "NEW"),
+                    selectedIndex = if (isAddToExistingMode) 0 else 1,
+                    onSelect = { onModeChange(it == 0) },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 if (isAddToExistingMode) {
                     if (playlists.isEmpty()) {
                         Text(
-                            text = "NO PLAYLISTS YET - SWITCH TO CREATE NEW",
+                            text = "No playlists yet. Choose NEW to make one.",
                             style = adaptiveTypography().labelSmall,
-                            color = text.copy(alpha = 0.5f),
+                            color = textSecondary,
                             letterSpacing = 1.sp
                         )
                     } else {
                         Text(
-                            text = "SELECT PLAYLIST",
+                            text = "CHOOSE ONE",
                             style = adaptiveTypography().labelSmall,
-                            color = text.copy(alpha = 0.6f),
-                            fontWeight = FontWeight.ExtraLight,
+                            color = textSecondary,
                             letterSpacing = 1.2.sp
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
                         LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
                             items(playlists) { playlist ->
+                                // The whole row picks the playlist, not just the circle.
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .selectable(
+                                            selected = selectedPlaylist?.playlist?.id == playlist.playlist.id,
+                                            role = Role.RadioButton,
+                                            onClick = { onSelectPlaylist(playlist) }
+                                        ),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Checkbox(
-                                        checked = selectedPlaylist?.playlist?.id == playlist.playlist.id,
-                                        onCheckedChange = { onSelectPlaylist(playlist) },
-                                        colors = checkBoxColors()
+                                    RadioButton(
+                                        selected = selectedPlaylist?.playlist?.id == playlist.playlist.id,
+                                        onClick = null, // the row handles selection
+                                        colors = RadioButtonDefaults.colors(selectedColor = cardBorder, unselectedColor = cardBorder)
                                     )
                                     Text(
                                         text = playlist.playlist.name,
@@ -240,12 +240,10 @@ fun AddToPlaylistDialog(
                     text = "CANCEL",
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.ExtraLight,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
                 )
             }
-        },
-        containerColor = secondaryBg
+        }
     )
 }

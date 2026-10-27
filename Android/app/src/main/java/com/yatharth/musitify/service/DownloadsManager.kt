@@ -29,7 +29,9 @@ data class DownloadJob(
     val status: DownloadStatus = DownloadStatus.QUEUED,
     val completed: Int = 0,
     val total: Int = 0,          // 0 = unknown / indeterminate
-    val error: String? = null
+    val error: String? = null,
+    // Song or playlist name once known, so the UI never has to show the URL.
+    val title: String? = null
 ) {
     val isActive get() = status == DownloadStatus.QUEUED || status == DownloadStatus.RUNNING
 }
@@ -86,6 +88,11 @@ class DownloadsManager @Inject constructor(
         queue.trySend(id)
     }
 
+    /** Removes one finished job, e.g. after the UI has announced it. */
+    fun dismiss(id: Long) {
+        _jobs.update { list -> list.filter { it.id != id || it.isActive } }
+    }
+
     fun clearFinished() {
         _jobs.update { list -> list.filter { it.isActive } }
     }
@@ -109,9 +116,16 @@ class DownloadsManager @Inject constructor(
         val task = scope.launch {
             try {
                 when (job.type) {
-                    DownloadType.SONG -> songRepository.downloadSong(job.url)
+                    DownloadType.SONG -> {
+                        // downloadSong returns null instead of throwing when it
+                        // fails; without this the job was reported as Done.
+                        val song = songRepository.downloadSong(job.url)
+                            ?: throw IllegalStateException("Couldn't download this song")
+                        update(id) { it.copy(title = song.name) }
+                    }
                     DownloadType.PLAYLIST -> playlistRepository.downloadPlaylist(
                         playlistUrl = job.url,
+                        onName = { name -> update(id) { it.copy(title = name) } },
                         onProgress = { completed, total ->
                             update(id) { it.copy(completed = completed, total = total) }
                         }

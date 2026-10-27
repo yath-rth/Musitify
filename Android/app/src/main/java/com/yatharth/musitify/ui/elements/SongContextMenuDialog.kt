@@ -1,5 +1,6 @@
 package com.yatharth.musitify.ui.elements
 
+import com.yatharth.musitify.util.SongDisplay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +42,7 @@ fun SongContextMenuDialog(
     onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
-    AlertDialog(
+    MusitifyDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(
@@ -60,7 +60,7 @@ fun SongContextMenuDialog(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = song.name,
+                        text = SongDisplay.title(song),
                         style = adaptiveTypography().bodyMedium,
                         color = text,
                         fontWeight = FontWeight.Bold,
@@ -167,12 +167,10 @@ fun SongContextMenuDialog(
                     text = "CANCEL",
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.ExtraLight,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
                 )
             }
-        },
-        containerColor = secondaryBg
+        }
     )
 }

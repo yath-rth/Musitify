@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -22,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.ui.theme.accentColor1
+import com.yatharth.musitify.ui.theme.primaryAction
 import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.cardBorder
@@ -37,7 +37,7 @@ fun RenamePlaylistDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
+    MusitifyDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -50,13 +50,6 @@ fun RenamePlaylistDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Current name: ${playlist.name}",
-                    style = adaptiveTypography().bodySmall,
-                    color = text.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium
-                )
-
                 Box(modifier = Modifier.fillMaxWidth().padding(end = 4.dp, bottom = 4.dp)) {
                     Box(
                         modifier = Modifier
@@ -99,12 +92,12 @@ fun RenamePlaylistDialog(
         confirmButton = {
             CustomButton(
                 onClick = onConfirm,
-                bgColor = accentColor1.copy(alpha = 0.2f)
+                bgColor = primaryAction.copy(alpha = 0.2f)
             ) {
                 Text(
                     text = "RENAME",
                     style = adaptiveTypography().labelMedium,
-                    color = accentColor1,
+                    color = primaryAction,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
@@ -117,12 +110,10 @@ fun RenamePlaylistDialog(
                     text = "CANCEL",
                     style = adaptiveTypography().labelMedium,
                     color = text,
-                    fontWeight = FontWeight.ExtraLight,
                     letterSpacing = 1.2.sp,
                     modifier = Modifier.padding(10.dp)
                 )
             }
-        },
-        containerColor = secondaryBg
+        }
     )
 }

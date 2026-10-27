@@ -1,13 +1,40 @@
 package com.yatharth.musitify.ui.screens
 
+import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material.icons.outlined.QueueMusic
+import com.yatharth.musitify.ui.elements.EmptyState
+import com.yatharth.musitify.util.SongDisplay
 import androidx.activity.compose.BackHandler
 import androidx.collection.CircularArray
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.outlined.Download
+import com.yatharth.musitify.ui.theme.itemsBg
+import androidx.compose.material.icons.outlined.Shuffle
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import kotlinx.coroutines.channels.Channel
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
+import com.yatharth.musitify.ui.theme.primaryAction
+import com.yatharth.musitify.ui.elements.CustomButton
+import com.yatharth.musitify.ui.elements.OutlinedInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,9 +72,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +92,7 @@ import com.yatharth.musitify.data.viewmodel.AddSongsUiState
 import com.yatharth.musitify.data.viewmodel.AddSongsViewModel
 import com.yatharth.musitify.data.viewmodel.HomeScreenViewModel
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
+import com.yatharth.musitify.data.viewmodel.PlaylistDialogUiState
 import com.yatharth.musitify.service.DownloadJob
 import com.yatharth.musitify.service.DownloadStatus
 import com.yatharth.musitify.service.DownloadType
@@ -72,7 +102,8 @@ import com.yatharth.musitify.ui.elements.CustomAlertBox
 import com.yatharth.musitify.ui.elements.CustomCircularButton
 import com.yatharth.musitify.ui.elements.PlaybackControls
 import com.yatharth.musitify.ui.elements.PlaylistContextMenuDialog
-import com.yatharth.musitify.ui.elements.PlaylistDialog
+import com.yatharth.musitify.ui.elements.AddSongsToPlaylistDialog
+import com.yatharth.musitify.ui.elements.CreatePlaylistDialog
 import com.yatharth.musitify.ui.elements.RenamePlaylistDialog
 import com.yatharth.musitify.ui.elements.RenameSongDialog
 import com.yatharth.musitify.ui.elements.ReorderableSongList
@@ -85,9 +116,12 @@ import com.yatharth.musitify.ui.elements.display.PlaylistCarousel
 import com.yatharth.musitify.ui.theme.accentColor2
 import com.yatharth.musitify.ui.theme.adaptiveTypography
 import com.yatharth.musitify.ui.theme.background
+import com.yatharth.musitify.ui.theme.dotGridBackground
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.text
+import com.yatharth.musitify.ui.theme.textSecondary
 import com.yatharth.musitify.util.Formatter
+import com.yatharth.musitify.util.LinkDetector
 import com.yatharth.musitify.util.SongMedia.playCountOf
 import java.io.File
 
@@ -97,7 +131,6 @@ fun HomeScreen(
     homeScreenViewModel: HomeScreenViewModel = hiltViewModel(),
     playbackControllerViewModel: PlaybackControllerViewModel = hiltViewModel(),
     addSongsViewModel: AddSongsViewModel = hiltViewModel(),
-    onOpenStats: () -> Unit = {}
 ) {
     val TAG = "HomeScreen"
 
@@ -111,8 +144,9 @@ fun HomeScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var showSleepTimerDialog by remember { mutableStateOf(false) }
+    var showNowPlaying by rememberSaveable { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableStateOf(HomeTab.LIBRARY) }
     var url by remember { mutableStateOf("") }
-    var isPlaylistMode by remember { mutableStateOf(false) }
     var isListMode by remember { mutableStateOf(false) }
     var isReorderMode by remember { mutableStateOf(false) }
 
@@ -150,9 +184,23 @@ fun HomeScreen(
     var showRenamePlaylistDialog by remember { mutableStateOf(false) }
     var newPlaylistNameForRename by remember { mutableStateOf("") }
 
-    val selectedPlaylist: PlaylistInfo? = remember(selectedPlaylistId) {
+    val selectedPlaylist: PlaylistInfo? =
         playlists.firstOrNull { it.playlist.id == selectedPlaylistId }
+
+    // Finished downloads leave the card and are announced once at the bottom,
+    // so the card only takes space while there's something to watch or retry.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val announcements = remember { Channel<String>(Channel.UNLIMITED) }
+    LaunchedEffect(downloadJobs) {
+        downloadJobs.filter { it.status == DownloadStatus.COMPLETED }.forEach { job ->
+            announcements.trySend(completedMessage(job))
+            addSongsViewModel.dismiss(job.id)
+        }
     }
+    LaunchedEffect(Unit) {
+        for (message in announcements) snackbarHostState.showSnackbar(message)
+    }
+    val visibleJobs = downloadJobs.filter { it.status != DownloadStatus.COMPLETED }
 
     // Once a URL is queued, close the dialog; the queue card shows progress from here.
     LaunchedEffect(addState) {
@@ -164,65 +212,83 @@ fun HomeScreen(
     }
 
     BackHandler(
-        enabled = songsInPlaylist.isNotEmpty()
+        enabled = selectedPlaylistId != null
     ) {
+        isReorderMode = false
         homeScreenViewModel.clearSelectedPlaylist()
     }
 
+    // Prefer the id; fall back to the title for tracks queued before ids were tracked.
+    val currentSong: Song? = allSongs.firstOrNull { it.id == uiState.currentSongId }
+        ?: allSongs.firstOrNull { it.name == uiState.currentTitle }
+    val hasTrack = uiState.currentTitle != null
+
+    // Back from Stats returns to the library.
+    BackHandler(enabled = tab == HomeTab.STATS) { tab = HomeTab.LIBRARY }
+
+    // Declared after the other handlers so it wins while the player is open.
+    BackHandler(enabled = showNowPlaying) { showNowPlaying = false }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier
-            .fillMaxSize(),
-        containerColor = background,
+            .fillMaxSize()
+            .dotGridBackground(),
+        containerColor = Color.Transparent,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data -> InfoToast(data.visuals.message) }
+        },
+        topBar = {
+            AppHeader(
+                tab = tab,
+                onTabSelected = { tab = it },
+                onSync = {
+                    homeScreenViewModel.syncLibrary()
+                    homeScreenViewModel.fetchLibrary()
+                },
+                onAddSongs = { showAddDialog = true }
+            )
+        },
         bottomBar = {
-            Column(
+            PlaybackControls(
+                // Solid backing so scrolled content doesn't show through
+                // around the bar or behind the system navigation bar.
                 modifier = Modifier
                     .fillMaxWidth()
+                    .dotGridBackground()
                     .navigationBarsPadding(),
-                horizontalAlignment = Alignment.End
-            ) {
-                CustomCircularButton(
-                    modifier = modifier,
-                    onClick = {
-                        homeScreenViewModel.syncLibrary()
-                        homeScreenViewModel.fetchLibrary()
-                    },
-                ){
-                    Icon(
-                        imageVector = Icons.Outlined.Sync,
-                        contentDescription = null,
-                        modifier = Modifier.padding(8.dp)
-                    )
-                }
-
-                PlaybackControls(
-                    modifier = Modifier.fillMaxWidth(),
-                    uiState = uiState,
-                    onBack = { playbackControllerViewModel.previous() },
-                    onPause = { playbackControllerViewModel.pause() },
-                    onNext = { playbackControllerViewModel.next() },
-                    onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
-                    onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
-                    addSong = { showAddDialog = true },
-                    createPlaylist = { showPlaylistDialog = true },
-                    onStats = onOpenStats,
-                    onSleepTimer = { showSleepTimerDialog = true },
-                    sleepTimerActive = sleepTimerState.isActive
-                )
-            }
+                uiState = uiState,
+                title = currentSong?.let { SongDisplay.title(it) },
+                onBack = { playbackControllerViewModel.previous() },
+                onPause = { playbackControllerViewModel.pause() },
+                onNext = { playbackControllerViewModel.next() },
+                onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
+                onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
+                onOpenNowPlaying = if (hasTrack) ({ showNowPlaying = true }) else null
+            )
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = modifier
-                .navigationBarsPadding()
-                .padding(innerPadding)
-                .padding(8.dp)
+        val listedSongs = if (songFilterQuery.isBlank()) allSongs else filteredSongs
+
+        // contentPadding (not padding) so cards scroll under the player bar
+        // instead of being clipped above it.
+        if (tab == HomeTab.STATS) {
+            StatsContent(contentPadding = innerPadding)
+        } else LazyColumn(
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 8.dp,
+                end = 8.dp,
+                top = innerPadding.calculateTopPadding() + 8.dp,
+                bottom = innerPadding.calculateBottomPadding() + 8.dp
+            )
         ) {
 
             // ---- Download queue ----
-            if (downloadJobs.isNotEmpty()) {
+            if (visibleJobs.isNotEmpty()) {
                 item(key = "download_queue") {
                     DownloadQueueCard(
-                        jobs = downloadJobs,
+                        jobs = visibleJobs,
                         onCancel = { addSongsViewModel.cancel(it) },
                         onRetry = { addSongsViewModel.retry(it) },
                         onClearFinished = { addSongsViewModel.clearFinished() },
@@ -233,119 +299,148 @@ fun HomeScreen(
                 }
             }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = selectedPlaylist?.playlist?.name?.uppercase() ?: "PLAYLISTS",
-                        color = text,
-                        style = adaptiveTypography().labelLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 2.sp,
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-
-                    if (selectedPlaylist == null) {
-                        SortIcon(
-                            mode = playlistSortMode,
-                            onClick = {
-                                homeScreenViewModel.onPlaylistSortModeToggle()
-                            }
-                        )
-                    } else {
-                        // Show reorder button when a playlist is selected
-                        IconButton(onClick = { isReorderMode = !isReorderMode }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Reorder,
-                                contentDescription = if (isReorderMode) "Exit reorder mode" else "Reorder songs",
-                                tint = if (isReorderMode) accentColor2 else cardBorder
-                            )
-                        }
-                    }
-                }
-
-                AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
-                    PlaylistCarousel(
-                        playlists = playlists,
-                        currentPlayingIndex = selectedPlaylistId?.coerceAtLeast(0) ?: 0,
-                        onPlaylistSelected = { index -> homeScreenViewModel.loadPlaylist(index) },
-                        onLongClick = { playlist ->
-                            playlistForContextMenu = playlist
-                            showPlaylistContextMenu = true
-                        },
-                        onCreatePlaylist = { showPlaylistDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    )
-                }
-
-                selectedPlaylistId?.let { playlistId ->
-                    AnimatedVisibility(visible = songsInPlaylist.isNotEmpty() && !isReorderMode) {
-                        MusicCarousel(
-                            songs = songsInPlaylist,
-                            currentPlayingIndex = songsInPlaylist.indexOfFirst { it.name == uiState.currentTitle }
-                                .coerceAtLeast(0),
-                            onTrackSelected = { index ->
-                                playbackControllerViewModel.playSongs(
-                                    songsInPlaylist,
-                                    index,
-                                    playlistId
-                                )
-                            },
-                            onLongSelect = { song ->
-                                songForContextMenu = song
-                                showSongContextMenu = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                        )
-                    }
-
-                    AnimatedVisibility(visible = songsInPlaylist.isNotEmpty() && isReorderMode) {
-                        Column {
-                            Text(
-                                text = "USE ARROWS TO REORDER SONGS",
-                                color = accentColor2,
-                                style = adaptiveTypography().labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp,
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                            ReorderableSongList(
-                                songs = songsInPlaylist,
-                                currentPlayingIndex = songsInPlaylist.indexOfFirst { it.name == uiState.currentTitle }
-                                    .coerceAtLeast(0),
-                                onTrackSelected = { index ->
-                                    playbackControllerViewModel.playSongs(
-                                        songsInPlaylist,
-                                        index,
-                                        playlistId
-                                    )
-                                },
-                                onReorder = { fromIndex, toIndex ->
-                                    homeScreenViewModel.reorderSongsInPlaylist(fromIndex, toIndex)
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            item {
-                AnimatedVisibility(visible = songsInPlaylist.isEmpty()) {
+            if (selectedPlaylist == null) {
+                item(key = "playlists_header") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "PLAYLISTS",
+                            color = text,
+                            style = adaptiveTypography().labelLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 2.sp,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        SortIcon(
+                            mode = playlistSortMode,
+                            onClick = { homeScreenViewModel.onPlaylistSortModeToggle() }
+                        )
+                        // Creating a playlist is an action, not a playlist, so it
+                        // lives here instead of as a full-size card in the carousel.
+                        CustomButton(onClick = {
+                            isAddToExistingMode = false
+                            showPlaylistDialog = true
+                        }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription = "New playlist",
+                                tint = cardBorder,
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
+                    }
+                }
+                item(key = "playlists_carousel") {
+                    Column {
+                        if (playlists.isEmpty()) {
+                            EmptyHint(
+                                title = "No playlists yet",
+                                body = "Group songs you like to play together.",
+                                action = "NEW PLAYLIST",
+                                onAction = {
+                                    isAddToExistingMode = false
+                                    showPlaylistDialog = true
+                                }
+                            )
+                        } else {
+                            PlaylistCarousel(
+                                playlists = playlists,
+                                currentPlayingIndex = 0,
+                                onPlaylistSelected = { id -> homeScreenViewModel.loadPlaylist(id) },
+                                onLongClick = { playlist ->
+                                    playlistForContextMenu = playlist
+                                    showPlaylistContextMenu = true
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            } else {
+                val playlistId = selectedPlaylist.playlist.id
+                item(key = "playlist_header") {
+                    PlaylistHeader(
+                        info = selectedPlaylist,
+                        isReorderMode = isReorderMode,
+                        canPlay = songsInPlaylist.isNotEmpty(),
+                        onBack = {
+                            isReorderMode = false
+                            homeScreenViewModel.clearSelectedPlaylist()
+                        },
+                        onToggleReorder = { isReorderMode = !isReorderMode },
+                        onPlay = {
+                            playbackControllerViewModel.playSongs(songsInPlaylist, 0, playlistId)
+                        },
+                        onShuffle = {
+                            playbackControllerViewModel.playShuffled(songsInPlaylist, playlistId)
+                        }
+                    )
+                }
+                item(key = "playlist_songs") {
+                    Column {
+                        when {
+                            selectedPlaylist.numOfSongs == 0 -> EmptyHint(
+                                title = "This playlist is empty",
+                                body = "Add songs from your library.",
+                                action = "ADD SONGS",
+                                onAction = {
+                                    isAddToExistingMode = true
+                                    selectedPlaylistForDialog = selectedPlaylist
+                                    showPlaylistDialog = true
+                                }
+                            )
+
+                            isReorderMode -> {
+                                Text(
+                                    text = "Drag the handles to reorder",
+                                    color = textSecondary,
+                                    style = adaptiveTypography().bodySmall,
+                                    modifier = Modifier
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                ReorderableSongList(
+                                    songs = songsInPlaylist,
+                                    currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id },
+                                    onTrackSelected = { index ->
+                                        playbackControllerViewModel.playSongs(songsInPlaylist, index, playlistId)
+                                    },
+                                    onReorder = { fromIndex, toIndex ->
+                                        homeScreenViewModel.reorderSongsInPlaylist(fromIndex, toIndex)
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp)
+                                )
+                            }
+
+                            else -> MusicCarousel(
+                                songs = songsInPlaylist,
+                                currentPlayingIndex = songsInPlaylist.indexOfFirst { it.id == currentSong?.id }
+                                    .coerceAtLeast(0),
+                                onTrackSelected = { index ->
+                                    playbackControllerViewModel.playSongs(songsInPlaylist, index, playlistId)
+                                },
+                                onLongSelect = { song ->
+                                    songForContextMenu = song
+                                    showSongContextMenu = true
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+
+            if (selectedPlaylist == null) {
+                item(key = "songs_header") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -355,6 +450,7 @@ fun HomeScreen(
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 2.sp,
                             modifier = Modifier
+                                .weight(1f)
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         )
 
@@ -365,92 +461,79 @@ fun HomeScreen(
                             }
                         )
 
-                        IconButton(onClick = { isListMode = !isListMode }) {
+                        CustomButton(onClick = { isListMode = !isListMode }) {
                             Icon(
                                 imageVector = if (isListMode) Icons.Outlined.ViewCarousel else Icons.Outlined.List,
                                 contentDescription = if (isListMode) "Switch to carousel view" else "Switch to list view",
-                                tint = cardBorder
+                                tint = cardBorder,
+                                modifier = Modifier.padding(6.dp)
                             )
                         }
-
                     }
                 }
 
-                AnimatedVisibility(visible = songsInPlaylist.isEmpty() && !isListMode) {
-                    MusicCarousel(
-                        songs = allSongs,
-                        scroll = false,
-                        currentPlayingIndex = allSongs.indexOfFirst { it.name == uiState.currentTitle }
-                            .coerceAtLeast(0),
-                        onTrackSelected = { index ->
-                            playbackControllerViewModel.playSongs(
-                                allSongs,
-                                index,
-                                null
-                            )
-                        },
-                        onLongSelect = { song ->
-                            songForContextMenu = song
-                            showSongContextMenu = true
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    )
-                }
-
-                AnimatedVisibility(visible = songsInPlaylist.isEmpty() && isListMode) {
-                    ShadowBox(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 500.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp)
+                if (!isListMode) {
+                    item(key = "songs_carousel") {
+                        MusicCarousel(
+                            songs = allSongs,
+                            scroll = false,
+                            currentPlayingIndex = allSongs.indexOfFirst { it.id == currentSong?.id }
+                                .coerceAtLeast(0),
+                            onTrackSelected = { index ->
+                                playbackControllerViewModel.playSongs(
+                                    allSongs,
+                                    index,
+                                    null
+                                )
+                            },
+                            onLongSelect = { song ->
+                                songForContextMenu = song
+                                showSongContextMenu = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
                         )
-                        {
+                    }
+                } else {
+                    // Rows are part of this one scrolling list, so nothing gets
+                    // cut off inside a fixed-height box.
+                    item(key = "songs_search") {
+                        Column {
                             LibrarySearchBar(
                                 query = songFilterQuery,
                                 onQueryChange = { homeScreenViewModel.onSearchQueryChange(it) },
                                 placeholder = "search your library"
                             )
-                            LazyColumn(
-                                Modifier.padding(vertical = 12.dp)
-                            ) {
-                                val listedSongs =
-                                    if (songFilterQuery.isBlank()) allSongs else filteredSongs
-                                items(listedSongs) { song ->
-                                    SongListRow(
-                                        song = song,
-                                        isPlaying = song.name == uiState.currentTitle,
-                                        onClick = {
-                                            playbackControllerViewModel.playSongs(
-                                                listedSongs,
-                                                listedSongs.indexOf(song),
-                                                null
-                                            )
-                                        },
-                                        onLongClick = {
-                                            songToDelete = song.id to song.name
-                                            showSongDeleteConfirm.value = true
-                                        }
-                                    )
-                                }
+                            if (listedSongs.isEmpty() && songFilterQuery.isNotBlank()) {
+                                NoSearchResults(
+                                    query = songFilterQuery,
+                                    onClear = { homeScreenViewModel.onSearchQueryChange("") }
+                                )
                             }
+                            Spacer(Modifier.height(8.dp))
                         }
+                    }
+                    items(listedSongs, key = { "song_${it.id}" }) { song ->
+                        SongListRow(
+                            song = song,
+                            isPlaying = song.id == currentSong?.id,
+                            onClick = {
+                                playbackControllerViewModel.playSongs(
+                                    listedSongs,
+                                    listedSongs.indexOf(song),
+                                    null
+                                )
+                            },
+                            // Same menu as the carousel; delete is one of its options.
+                            onLongClick = {
+                                songForContextMenu = song
+                                showSongContextMenu = true
+                            }
+                        )
                     }
                 }
             }
 
-            item {
-                uiState.currentTitle?.let {
-                    PlaybackScreen(
-                        modifier = Modifier.fillMaxWidth(),
-                        song = allSongs[allSongs.indexOfFirst { song -> song.name == it }
-                            .coerceAtLeast(0)],
-                        playing = uiState.isPlaying
-                    )
-                }
-            }
         }
 
         if (showAddDialog) {
@@ -462,15 +545,10 @@ fun HomeScreen(
                 },
                 url = url,
                 onUrlChange = { url = it },
-                isPlaylistMode = isPlaylistMode,
-                onModeChange = {
-                    isPlaylistMode = it
-                    addSongsViewModel.resetState()
-                },
                 state = addState,
                 onSubmit = {
                     if (url.isNotBlank()) {
-                        if (isPlaylistMode) addSongsViewModel.addPlaylist(url)
+                        if (LinkDetector.isPlaylist(url)) addSongsViewModel.addPlaylist(url)
                         else addSongsViewModel.addSingleSong(url)
                     }
                 }
@@ -517,49 +595,70 @@ fun HomeScreen(
         }
 
         if (showPlaylistDialog) {
-            PlaylistDialog(
-                onDismiss = {
-                    showPlaylistDialog = false
-                    homeScreenViewModel.resetState()
-                    selectedSongIds = emptySet()
-                    selectedPlaylistForDialog = null
-                    newPlaylistName = ""
-                },
-                isAddToExistingMode = isAddToExistingMode,
-                onModeChange = {
-                    isAddToExistingMode = it
-                    homeScreenViewModel.resetState()
-                },
-                newPlaylistName = newPlaylistName,
-                onNewPlaylistNameChange = { newPlaylistName = it },
-                songQuery = songFilterQuery,
-                onSongFilter = { homeScreenViewModel.onSearchQueryChange(it) },
-                playlists = playlists,
-                selectedPlaylist = selectedPlaylistForDialog,
-                onSelectPlaylist = { selectedPlaylistForDialog = it },
-                allSongs = filteredSongs,
-                selectedSongIds = selectedSongIds,
-                onToggleSong = { song ->
-                    selectedSongIds = if (selectedSongIds.contains(song))
-                        selectedSongIds - song else selectedSongIds + song
-                },
-                state = playlistState,
-                onSubmit = {
-                    if (isAddToExistingMode) {
-                        selectedPlaylistForDialog?.let {
-                            homeScreenViewModel.addSongsToPlaylist(
-                                it.playlist,
-                                selectedSongIds
-                            )
-                        }
-                    } else {
-                        homeScreenViewModel.createPlaylistWithSongs(
-                            newPlaylistName,
-                            selectedSongIds
-                        )
-                    }
+            // Its own search, so it doesn't share (and leave filtered) the library search box.
+            var pickerQuery by remember { mutableStateOf("") }
+            val pickerSongs = remember(allSongs, pickerQuery) {
+                allSongs.filter {
+                    pickerQuery.isBlank() ||
+                            it.name.contains(pickerQuery, ignoreCase = true) ||
+                            it.artist.contains(pickerQuery, ignoreCase = true)
                 }
-            )
+            }
+            val toggleSong: (Song) -> Unit = { song ->
+                selectedSongIds = if (song in selectedSongIds) selectedSongIds - song else selectedSongIds + song
+            }
+            val closePlaylistDialog: () -> Unit = {
+                showPlaylistDialog = false
+                homeScreenViewModel.resetState()
+                selectedSongIds = emptySet()
+                selectedPlaylistForDialog = null
+                newPlaylistName = ""
+            }
+            val target = selectedPlaylistForDialog
+
+            if (isAddToExistingMode && target != null) {
+                val targetSongs by remember(target.playlist.id) {
+                    homeScreenViewModel.songsIn(target.playlist.id)
+                }.collectAsState(initial = emptyList())
+                AddSongsToPlaylistDialog(
+                    playlistName = target.playlist.name,
+                    query = pickerQuery,
+                    onQueryChange = { pickerQuery = it },
+                    songs = pickerSongs,
+                    alreadyIn = targetSongs.map { it.id }.toSet(),
+                    selected = selectedSongIds,
+                    onToggleSong = toggleSong,
+                    state = playlistState,
+                    onSubmit = { homeScreenViewModel.addSongsToPlaylist(target.playlist, selectedSongIds) },
+                    onDismiss = closePlaylistDialog
+                )
+            } else {
+                CreatePlaylistDialog(
+                    name = newPlaylistName,
+                    onNameChange = { newPlaylistName = it },
+                    query = pickerQuery,
+                    onQueryChange = { pickerQuery = it },
+                    songs = pickerSongs,
+                    selected = selectedSongIds,
+                    onToggleSong = toggleSong,
+                    state = playlistState,
+                    onSubmit = { homeScreenViewModel.createPlaylistWithSongs(newPlaylistName.trim(), selectedSongIds) },
+                    onDismiss = closePlaylistDialog
+                )
+            }
+
+            // Close on success and say what happened, instead of a "SAVED"
+            // label that left you to press Cancel.
+            LaunchedEffect(playlistState) {
+                if (playlistState is PlaylistDialogUiState.Success) {
+                    announcements.trySend(
+                        if (isAddToExistingMode && target != null)
+                            "Added ${Formatter.count(selectedSongIds.size, "song")} to ${target.playlist.name}"
+                        else "Created ${newPlaylistName.trim()}"
+                    )
+                    closePlaylistDialog()
+                }
+            }
         }
 
         // Song context menu dialog
@@ -572,6 +671,7 @@ fun HomeScreen(
                 },
                 onAddToPlaylist = {
                     showSongContextMenu = false
+                    isAddToExistingPlaylistMode = playlists.isNotEmpty()
                     showAddToPlaylistDialog = true
                 },
                 onRename = {
@@ -590,6 +690,21 @@ fun HomeScreen(
 
         // Add to playlist dialog
         if (showAddToPlaylistDialog && songForContextMenu != null) {
+            LaunchedEffect(playlistState) {
+                if (playlistState is PlaylistDialogUiState.Success) {
+                    announcements.trySend(
+                        if (isAddToExistingPlaylistMode)
+                            "Added to ${selectedPlaylistForAddSong?.playlist?.name ?: "playlist"}"
+                        else "Created ${newPlaylistNameForSong.trim()}"
+                    )
+                    showAddToPlaylistDialog = false
+                    selectedPlaylistForAddSong = null
+                    newPlaylistNameForSong = ""
+                    songForContextMenu = null
+                    isAddToExistingPlaylistMode = false
+                    homeScreenViewModel.resetState()
+                }
+            }
             AddToPlaylistDialog(
                 song = songForContextMenu!!,
                 onDismiss = {
@@ -710,6 +825,7 @@ fun HomeScreen(
                 onSetTimer = { duration ->
                     playbackControllerViewModel.startSleepTimer(duration)
                 },
+                onEndOfSong = { playbackControllerViewModel.startSleepAtEndOfSong() },
                 onCancelTimer = {
                     playbackControllerViewModel.cancelSleepTimer()
                 },
@@ -719,6 +835,240 @@ fun HomeScreen(
             )
         }
     }
+
+    AnimatedVisibility(
+        visible = showNowPlaying && hasTrack,
+        enter = slideInVertically(initialOffsetY = { it }),
+        exit = slideOutVertically(targetOffsetY = { it })
+    ) {
+        NowPlayingScreen(
+            song = currentSong,
+            uiState = uiState,
+            sleepTimerState = sleepTimerState,
+            onClose = { showNowPlaying = false },
+            onPlayPause = { playbackControllerViewModel.pause() },
+            onPrevious = { playbackControllerViewModel.previous() },
+            onNext = { playbackControllerViewModel.next() },
+            onSeek = { playbackControllerViewModel.seekTo(it) },
+            onRepeatToggle = { playbackControllerViewModel.toggleRepeatMode() },
+            onShuffleToggle = { playbackControllerViewModel.toggleShuffleMode() },
+            onSleepTimer = { showSleepTimerDialog = true }
+        )
+    }
+    }
+}
+
+enum class HomeTab(val label: String) { LIBRARY("LIBRARY"), STATS("STATS") }
+
+/**
+ * Top bar: the two places in the app (Library, Stats) as tabs, plus the
+ * library actions. Replaces the stats button in the player bar and the
+ * floating sync button.
+ */
+@Composable
+private fun AppHeader(
+    tab: HomeTab,
+    onTabSelected: (HomeTab) -> Unit,
+    onSync: () -> Unit,
+    onAddSongs: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .dotGridBackground()
+            .statusBarsPadding()
+            .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .selectableGroup()
+        ) {
+            HomeTab.entries.forEach { t ->
+                val selected = t == tab
+                Column(
+                    modifier = Modifier
+                        .selectable(
+                            selected = selected,
+                            role = Role.Tab,
+                            onClick = { onTabSelected(t) }
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = t.label,
+                        color = if (selected) text else textSecondary,
+                        style = adaptiveTypography().labelLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .height(3.dp)
+                            .width(if (selected) 28.dp else 0.dp)
+                            .background(text, RoundedCornerShape(2.dp))
+                    )
+                }
+            }
+        }
+
+        if (tab == HomeTab.LIBRARY) {
+            CustomButton(onClick = onSync) {
+                Icon(
+                    imageVector = Icons.Outlined.Sync,
+                    contentDescription = "Sync library",
+                    tint = cardBorder,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+            CustomButton(onClick = onAddSongs, bgColor = primaryAction.copy(alpha = 0.2f)) {
+                // Download arrow, not "+", so it can't be confused with New playlist.
+                Icon(
+                    imageVector = Icons.Outlined.Download,
+                    contentDescription = "Add songs from a link",
+                    tint = cardBorder,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Top of an opened playlist: a way back, what it is, and the two things you
+ * most likely want to do with it.
+ */
+@Composable
+private fun PlaylistHeader(
+    info: PlaylistInfo,
+    isReorderMode: Boolean,
+    canPlay: Boolean,
+    onBack: () -> Unit,
+    onToggleReorder: () -> Unit,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CustomButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = "Back to library",
+                    tint = cardBorder,
+                    modifier = Modifier.padding(6.dp)
+                )
+            }
+            Text(
+                text = "PLAYLIST",
+                color = textSecondary,
+                style = adaptiveTypography().labelMedium,
+                fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp)
+            )
+            if (canPlay) {
+                CustomButton(
+                    onClick = onToggleReorder,
+                    bgColor = if (isReorderMode) cardBorder else itemsBg
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Reorder,
+                        contentDescription = if (isReorderMode) "Done reordering" else "Reorder songs",
+                        tint = if (isReorderMode) itemsBg else cardBorder,
+                        modifier = Modifier.padding(6.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ShadowBox(modifier = Modifier.size(112.dp), rounding = 5) {
+                info.playlist.artPath?.let {
+                    AsyncImage(
+                        model = File(it),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(2.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = info.playlist.name,
+                    color = text,
+                    style = adaptiveTypography().titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${Formatter.count(info.numOfSongs, "song")} · " +
+                            Formatter.formatTimeToMinutes(info.playlistLength),
+                    color = textSecondary,
+                    style = adaptiveTypography().bodySmall
+                )
+                if (canPlay) {
+                    Spacer(Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        LabeledButton("PLAY", Icons.Outlined.PlayArrow, filled = true, onClick = onPlay)
+                        LabeledButton("SHUFFLE", Icons.Outlined.Shuffle, filled = false, onClick = onShuffle)
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+/** Icon + text button in the outlined style; [filled] marks the main action. */
+@Composable
+private fun LabeledButton(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    filled: Boolean,
+    onClick: () -> Unit,
+) {
+    val tint = if (filled) itemsBg else cardBorder
+    CustomButton(onClick = onClick, bgColor = if (filled) cardBorder else itemsBg) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            Text(
+                text = label,
+                color = tint,
+                style = adaptiveTypography().labelMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+    }
+}
+
+/** Empty state with one clear next step. */
+@Composable
+private fun EmptyHint(title: String, body: String, action: String, onAction: () -> Unit) {
+    EmptyState(
+        title = title,
+        message = body,
+        icon = Icons.Outlined.QueueMusic,
+        actionLabel = action,
+        onAction = onAction
+    )
 }
 
 /**
@@ -750,7 +1100,7 @@ private fun DownloadQueueCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (activeCount > 0) "DOWNLOADS · $activeCount ACTIVE" else "DOWNLOADS",
+                    text = if (activeCount > 0) "DOWNLOADING · $activeCount" else "DOWNLOADS",
                     color = text,
                     style = adaptiveTypography().labelLarge,
                     fontWeight = FontWeight.ExtraBold,
@@ -813,7 +1163,7 @@ private fun DownloadJobRow(
     }
 
     val statusColor =
-        if (job.status == DownloadStatus.FAILED) text else text.copy(alpha = 0.6f)
+        if (job.status == DownloadStatus.FAILED) text else textSecondary
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -824,8 +1174,8 @@ private fun DownloadJobRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = (if (job.type == DownloadType.PLAYLIST) "Playlist · " else "Song · ") +
-                        displayUrl(job.url),
+                text = job.title
+                    ?: if (job.type == DownloadType.PLAYLIST) "Playlist (getting name…)" else "Song (getting name…)",
                 color = text,
                 style = adaptiveTypography().bodyMedium,
                 fontWeight = FontWeight.Medium,
@@ -883,9 +1233,28 @@ private fun DownloadJobRow(
 
 private const val COLLAPSED_ROWS = 3
 
-/** "https://www.youtube.com/watch?v=abc" -> "youtube.com/watch?v=abc" */
-private fun displayUrl(url: String): String =
-    url.removePrefix("https://").removePrefix("http://").removePrefix("www.")
+private fun completedMessage(job: DownloadJob): String = when (job.type) {
+    DownloadType.PLAYLIST ->
+        "Added ${job.title ?: "playlist"} · ${Formatter.count(job.total, "song")}"
+    DownloadType.SONG -> "Added ${job.title ?: "song"}"
+}
+
+/** Short message in the app's card style, shown above the player bar. */
+@Composable
+private fun InfoToast(message: String) {
+    ShadowBox(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            text = message,
+            color = text,
+            style = adaptiveTypography().bodyMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        )
+    }
+}
 
 /**
  * Dense search entry point for the list-mode browse view. Sits above the
@@ -899,27 +1268,28 @@ private fun LibrarySearchBar(
     placeholder: String,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = {
-            Text(
-                text = placeholder,
-                style = adaptiveTypography().bodyMedium,
-                color = text.copy(alpha = 0.5f)
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Outlined.Search,
-                contentDescription = null,
-                tint = cardBorder
-            )
-        },
-        singleLine = true,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+    // Tracknix input: outlined card with a hard shadow, not a Material field.
+    Box(modifier = modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+        OutlinedInput(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = placeholder,
+            leadingIcon = {
+                Icon(imageVector = Icons.Outlined.Search, contentDescription = null, tint = cardBorder)
+            }
+        )
+    }
+}
+
+/** Shown in place of the list when a search matches nothing. */
+@Composable
+private fun NoSearchResults(query: String, onClear: () -> Unit) {
+    EmptyState(
+        title = "No matches",
+        message = "Nothing in your library matches \"$query\". Check the spelling, or search by artist.",
+        icon = Icons.Outlined.SearchOff,
+        actionLabel = "CLEAR SEARCH",
+        onAction = onClear
     )
 }
 
@@ -931,6 +1301,7 @@ private fun LibrarySearchBar(
  * NOTE: song.duration / song.playCount are guessed field names — adjust
  * to match your actual Song entity.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SongListRow(
     song: Song,
@@ -939,37 +1310,62 @@ private fun SongListRow(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    // Tracknix list item: each row is its own small card (3dp hard shadow,
+    // 1.5dp border) so it reads cleanly above the dot grid.
+    val shape = RoundedCornerShape(4.dp)
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 6.dp)
     ) {
-        AsyncImage(
-            model = File(song.artPath),
-            contentDescription = song.name,
+        Box(
             modifier = Modifier
-                .size(34.dp)
-                .aspectRatio(1f),
-            contentScale = ContentScale.Crop
+                .matchParentSize()
+                .offset(3.dp, 3.dp)
+                .background(cardBorder, shape)
         )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(itemsBg)
+                .border(1.5.dp, cardBorder, shape)
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                .padding(12.dp)
+        ) {
+            AsyncImage(
+                model = File(song.artPath),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                contentScale = ContentScale.Crop
+            )
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = song.name,
-                color = if (isPlaying) cardBorder else text,
-                style = adaptiveTypography().bodyMedium,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "${Formatter.formatTime(song.length)} · ${playCountOf(song)} plays",
-                color = text.copy(alpha = 0.6f),
-                style = adaptiveTypography().labelSmall
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = SongDisplay.title(song),
+                    color = text,
+                    style = adaptiveTypography().bodyMedium,
+                    fontWeight = if (isPlaying) FontWeight.ExtraBold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = if (isPlaying) "Now playing"
+                    else listOfNotNull(
+                        SongDisplay.artist(song),
+                        Formatter.formatTime(song.length),
+                        Formatter.count(playCountOf(song), "play")
+                    ).joinToString(" · "),
+                    color = textSecondary,
+                    style = adaptiveTypography().labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
@@ -1017,8 +1413,8 @@ private fun PlaylistListRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${playlist.numOfSongs} songs",
-                color = text.copy(alpha = 0.6f),
+                text = Formatter.count(playlist.numOfSongs, "song"),
+                color = textSecondary,
                 style = adaptiveTypography().labelSmall
             )
         }

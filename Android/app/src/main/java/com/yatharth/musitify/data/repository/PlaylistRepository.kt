@@ -39,6 +39,7 @@ class PlaylistRepository @Inject constructor(
 
     suspend fun downloadPlaylist(
         playlistUrl: String,
+        onName: (String) -> Unit = {},
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> }
     ) = withContext(Dispatchers.IO) {
         if (!Python.isStarted()) {
@@ -54,6 +55,7 @@ class PlaylistRepository @Inject constructor(
         val urls: List<String> = urlsObj?.asList()?.map { it.toString() } ?: emptyList()
 
         Log.d(TAG, "Playlist: $playlistName, ${urls.size} tracks")
+        onName(playlistName)
 
         val songs = songRepository.downloadSongsFromSync(
             nSongs = urls.map {

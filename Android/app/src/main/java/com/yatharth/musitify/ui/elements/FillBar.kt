@@ -46,7 +46,8 @@ fun FillBar(
     max: Double,
     bgColor: Color = secondaryBg
 ) {
-    val progress = if (max > 0) (abs(value) / max).coerceIn(0.0, 1.0) else 1.0
+    // Nothing to measure (e.g. no song loaded) means an empty bar, not a full one.
+    val progress = if (max > 0) (abs(value) / max).coerceIn(0.0, 1.0) else 0.0
 
     val animatedProgress by animateFloatAsState(
         targetValue = progress.toFloat(),
@@ -82,7 +83,6 @@ fun FillBar(
                     text = secondaryLabel,
                     color = text.copy(alpha = 0.7f),
                     style = adaptiveTypography().labelSmall,
-                    fontWeight = FontWeight.ExtraLight,
                     letterSpacing = 0.5.sp
                 )
             }

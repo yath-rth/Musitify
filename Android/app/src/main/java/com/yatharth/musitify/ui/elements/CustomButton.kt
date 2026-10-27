@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -31,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.yatharth.musitify.ui.theme.BUTTON_ANIMATION_MS
 import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.itemsBg
 
@@ -46,7 +46,7 @@ fun CustomButton(
 
     val offset by animateDpAsState(
         targetValue = if (pressed) 2.dp else 0.dp,
-        animationSpec = tween(20),
+        animationSpec = tween(BUTTON_ANIMATION_MS),
         label = ""
     )
 
@@ -106,13 +106,16 @@ fun CustomCircularButton(
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     bgColor: Color = itemsBg,
+    // Filled ink background for toggles that are on (repeat, shuffle, sleep).
+    // Callers should tint their icon itemsBg when this is true.
+    selected: Boolean = false,
     content: @Composable () -> Unit = {},
 ) {
     var pressed by remember { mutableStateOf(false) }
 
     val offset by animateDpAsState(
-        targetValue = if (pressed) 3.dp else 0.dp,
-        animationSpec = tween(20),
+        targetValue = if (pressed) 2.dp else 0.dp,
+        animationSpec = tween(BUTTON_ANIMATION_MS),
         label = ""
     )
 
@@ -138,7 +141,7 @@ fun CustomCircularButton(
                 .matchParentSize()
                 .offset(x = 3.dp, y = 3.dp)
                 .background(
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(8.dp),
                     color = cardBorder
                 )
         )
@@ -151,20 +154,21 @@ fun CustomCircularButton(
             colors = CardDefaults.cardColors(
                 containerColor = itemsBg
             ),
-            shape = CircleShape,
+            // Tracknix buttons use minimal rounding (4-10dp), not circles.
+            shape = RoundedCornerShape(8.dp),
             border = BorderStroke(
-                1.dp,
+                1.5.dp,
                 color = cardBorder
             ),
         ) {
             Box(
                 modifier = Modifier
                     .wrapContentSize()
-                    .background(color = bgColor),
+                    .background(color = if (selected) cardBorder else bgColor),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
-                    modifier.padding(4.dp),
+                    Modifier.padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) { content() }
             }

@@ -48,6 +48,7 @@ class AddSongsViewModel @Inject constructor(
     fun cancel(id: Long) = downloadsManager.cancel(id)
     fun retry(id: Long) = downloadsManager.retry(id)
     fun clearFinished() = downloadsManager.clearFinished()
+    fun dismiss(id: Long) = downloadsManager.dismiss(id)
 
     fun resetState() {
         _state.value = AddSongsUiState.Idle
