@@ -24,7 +24,9 @@ enum class SleepTimerDuration(val minutes: Int, val label: String) {
 data class SleepTimerState(
     val isActive: Boolean = false,
     val duration: SleepTimerDuration? = null,
-    val remainingMs: Long = 0L
+    val remainingMs: Long = 0L,
+    // Stop when the current song finishes instead of after a fixed time.
+    val endOfSong: Boolean = false
 )
 
 /**
@@ -75,6 +77,13 @@ class SleepTimer(
                 delay(minOf(tickMs, remaining))
             }
         }
+    }
+
+    /** Pause when the current song ends. The player reports the end; see MediaControllerRepository. */
+    @Synchronized
+    fun startEndOfSong() {
+        cancelTimer()
+        _state.value = SleepTimerState(isActive = true, endOfSong = true)
     }
 
     @Synchronized

@@ -93,6 +93,18 @@ class AudioPlayer(
 
     val queue: List<Track> get() = _state.value.queue
 
+    /**
+     * When true, the current track plays to its end and playback then pauses (the queue still
+     * moves on to the next item, paused) — the "end of song" sleep timer. Reset after it fires.
+     */
+    @Volatile
+    var stopAfterCurrentTrack: Boolean = false
+
+    private val _stoppedAtTrackEnd = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+
+    /** Emits when [stopAfterCurrentTrack] paused playback at the end of a track. */
+    val stoppedAtTrackEnd: SharedFlow<Unit> = _stoppedAtTrackEnd.asSharedFlow()
+
     // ---- FX-thread confined ----
     private var player: MediaPlayer? = null
     private var tracks: List<Track> = emptyList()
@@ -272,6 +284,26 @@ class AudioPlayer(
 
     private fun handleEndOfMedia() {
         val nextIdx = navigator.autoAdvanceIndex(index, repeat)
+        if (stopAfterCurrentTrack) {
+            stopAfterCurrentTrack = false
+            playWhenReady = false
+            when {
+                nextIdx == null -> {
+                    ended = true
+                    player?.pause()
+                    _state.update { it.copy(isPlaying = false, ended = true, positionMs = it.durationMs) }
+                }
+                nextIdx == index -> {
+                    player?.pause()
+                    player?.seek(Duration.ZERO)
+                    _state.update { it.copy(isPlaying = false, positionMs = 0) }
+                    _transitions.tryEmit(tracks[index])
+                }
+                else -> load(nextIdx, autoplay = false)
+            }
+            _stoppedAtTrackEnd.tryEmit(Unit)
+            return
+        }
         when {
             nextIdx == null -> {
                 // Repeat OFF after the last item: ENDED, not playing

@@ -1,113 +1,105 @@
 package com.yatharth.musitify.ui.elements
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
 
 /**
- * Android spaced the grooves 20 *px* apart; on a typical 2.75x phone that is
- * ≈7.3 dp. Using dp keeps the phone look independent of desktop scaling.
+ * A vinyl record with the song's cover art ([artPath]) as the centre label.
+ *
+ * Only the disc and label rotate ([rotationDegrees]). The light reflection is
+ * drawn on top without rotating, the way light falls on a real spinning record,
+ * so the motion reads as spin rather than a rotating picture.
+ *
+ * @param labelFraction size of the cover-art label relative to the disc.
  */
-private val GrooveSpacing = (20f / 2.75f).dp
-
-/**
- * Spinning vinyl: black disc, 15 grooves, white label (22 % radius) and the
- * cover [art] as a centred circle of [imageSize] dp. The whole record (disc +
- * art) rotates while [playing] — 1 rev / 10 s, linear; pausing freezes it at
- * the current angle and resuming continues from there (Android PlaybackScreen).
- * Fills the available width as a square.
- */
-@Composable
-fun MusicRecord(
-    art: Painter,
-    playing: Boolean,
-    modifier: Modifier = Modifier,
-    imageSize: Int = 80,
-) {
-    val rotation = remember { Animatable(0f) }
-
-    LaunchedEffect(playing) {
-        if (playing) {
-            rotation.snapTo(rotation.value % 360f)
-            while (true) {
-                rotation.animateTo(
-                    targetValue = rotation.value + 360f,
-                    animationSpec = tween(durationMillis = 10000, easing = LinearEasing)
-                )
-            }
-        }
-    }
-
-    Box(
-        modifier = modifier.graphicsLayer { rotationZ = rotation.value },
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-        ) {
-            val radius = size.minDimension / 2
-            val spacing = GrooveSpacing.toPx()
-
-            drawCircle(color = Color.Black, radius = radius)
-
-            repeat(15) { i ->
-                val r = radius - i * spacing
-                if (r > 0f) {
-                    drawCircle(
-                        color = Color.DarkGray.copy(alpha = 0.35f),
-                        radius = r,
-                        style = Stroke(width = 1f)
-                    )
-                }
-            }
-
-            drawCircle(color = Color.White, radius = radius * 0.22f)
-        }
-
-        Image(
-            painter = art,
-            contentDescription = null,
-            modifier = Modifier
-                .size(imageSize.dp)
-                .clip(CircleShape),
-            contentScale = ContentScale.Crop
-        )
-    }
-}
-
-/** Convenience overload loading the art from a local file path (placeholder fallback). */
 @Composable
 fun MusicRecord(
     artPath: String?,
-    playing: Boolean,
     modifier: Modifier = Modifier,
-    imageSize: Int = 80,
+    rotationDegrees: Float = 0f,
+    labelFraction: Float = 0.5f,
 ) {
-    MusicRecord(
-        art = rememberArtPainter(artPath),
-        playing = playing,
-        modifier = modifier,
-        imageSize = imageSize,
-    )
+    Box(
+        modifier = modifier.aspectRatio(1f),
+        contentAlignment = Alignment.Center
+    ) {
+        // Disc + label: rotates.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { rotationZ = rotationDegrees },
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val radius = size.minDimension / 2
+                val labelRadius = radius * labelFraction
+                drawCircle(color = Color(0xFF111114), radius = radius)
+
+                // Grooves fill the band between the label and the edge,
+                // spaced relative to the size so they look the same anywhere.
+                val grooves = 14
+                val band = radius - labelRadius
+                repeat(grooves) { i ->
+                    drawCircle(
+                        color = Color.White.copy(alpha = if (i % 3 == 0) 0.10f else 0.05f),
+                        radius = labelRadius + band * (i + 1) / (grooves + 1),
+                        style = Stroke(width = 1.2f)
+                    )
+                }
+                // Thin dark ring where the label meets the vinyl.
+                drawCircle(
+                    color = Color.Black,
+                    radius = labelRadius + 2f,
+                    style = Stroke(width = 4f)
+                )
+            }
+
+            ArtImage(
+                path = artPath,
+                modifier = Modifier
+                    .fillMaxWidth(labelFraction)
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+            )
+
+            // Spindle hole.
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val r = size.minDimension / 2
+                drawCircle(color = Color(0xFF111114), radius = r * 0.035f)
+            }
+        }
+
+        // Reflection: does not rotate.
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val radius = size.minDimension / 2
+            drawCircle(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color.White.copy(alpha = 0.10f),
+                        Color.Transparent,
+                        Color.Transparent,
+                        Color.White.copy(alpha = 0.06f),
+                        Color.Transparent,
+                    ),
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, size.height)
+                ),
+                radius = radius
+            )
+        }
+    }
 }

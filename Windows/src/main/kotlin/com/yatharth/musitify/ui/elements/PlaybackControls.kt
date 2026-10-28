@@ -1,14 +1,17 @@
 package com.yatharth.musitify.ui.elements
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.ArrowBackIosNew
-import androidx.compose.material.icons.outlined.Bedtime
-import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Repeat
@@ -19,43 +22,44 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.yatharth.musitify.data.repository.PlayerUiState
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
 import com.yatharth.musitify.ui.theme.cardBorder
+import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.util.Formatter.formatTime
 import org.koin.compose.viewmodel.koinViewModel
 
+/** The transport buttons stay grouped instead of spreading across a wide window. */
+private val ControlsMaxWidth = 440.dp
+
 /**
- * Bottom playback bar: labelled progress [FillBar] + 7 circular buttons
- * (previous, play/pause, next, repeat, shuffle, insights, sleep timer).
- * Same signature as Android (the `addSong`/`createPlaylist` button is commented
- * out there too).
+ * Mini player pinned to the bottom. Playback only: previous, play and next, with play
+ * larger and filled as the main action. Shuffle and repeat sit at the edges, smaller.
+ * Everything else (sleep timer, big seek bar) is in the full-screen player, opened by
+ * clicking the title row (as on Android).
  *
- * Desktop addition: the progress bar is seekable (click / drag). [onSeek] gets the
- * target position in ms; by default it calls [PlaybackControllerViewModel.seekTo]
- * on the Koin-provided ViewModel, so Android-style call sites get seeking for free.
+ * Desktop: the progress bar is also seekable here (click / drag); [onSeek] gets the
+ * target position in ms.
  */
 @Composable
 fun PlaybackControls(
     modifier: Modifier,
     uiState: PlayerUiState,
+    // Display title (artist stripped); falls back to the player's raw title.
+    title: String? = null,
     onBack: () -> Unit,
     onPause: () -> Unit,
     onNext: () -> Unit,
-    addSong: () -> Unit,
-    createPlaylist: () -> Unit,
     onRepeatToggle: () -> Unit,
     onShuffleToggle: () -> Unit,
-    onStats: () -> Unit = {},
-    onSleepTimer: () -> Unit = {},
-    sleepTimerActive: Boolean = false,
+    // Opens the full-screen player. Null while nothing is loaded.
+    onOpenNowPlaying: (() -> Unit)? = null,
     onSeek: (Long) -> Unit = defaultSeek(),
 ) {
-    val repeatIcon = when (uiState.repeatMode) {
-        1 -> Icons.Outlined.RepeatOne
-        else -> Icons.Outlined.Repeat
-    }
+    val repeatOn = uiState.repeatMode != 0
     val canSeek = uiState.durationMs > 0L
 
     ShadowBox(
@@ -63,85 +67,119 @@ fun PlaybackControls(
     ) {
         Column(
             modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            FillBar(
-                modifier = Modifier.padding(horizontal = 8.dp),
-                label = uiState.currentTitle,
-                value = uiState.positionMs.toDouble(),
-                max = uiState.durationMs.toDouble(),
-                secondaryLabel = if (uiState.durationMs != 0L)
-                    "${formatTime(uiState.positionMs)} / ${formatTime(uiState.durationMs)}"
-                else null,
-                onSeek = if (canSeek) { fraction ->
-                    onSeek((fraction * uiState.durationMs).toLong())
-                } else null
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (onOpenNowPlaying != null)
+                            Modifier
+                                .handCursor()
+                                .clickable(onClickLabel = "Open player", onClick = onOpenNowPlaying)
+                        else Modifier
+                    )
+            ) {
+                FillBar(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    label = title ?: uiState.currentTitle ?: "Nothing playing",
+                    value = uiState.positionMs.toDouble(),
+                    max = uiState.durationMs.toDouble(),
+                    secondaryLabel = if (uiState.durationMs != 0L)
+                        "${formatTime(uiState.positionMs)} / ${formatTime(uiState.durationMs)}"
+                    else null,
+                    onSeek = if (canSeek) { fraction ->
+                        onSeek((fraction * uiState.durationMs).toLong())
+                    } else null
+                )
+                if (onOpenNowPlaying != null) {
+                    Icon(
+                        imageVector = Icons.Outlined.KeyboardArrowUp,
+                        contentDescription = null,
+                        tint = cardBorder,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
+            }
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier
+                    .widthIn(max = ControlsMaxWidth)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                CustomCircularButton(
+                    onClick = onShuffleToggle,
+                    selected = uiState.shuffleMode,
+                    modifier = Modifier.semantics {
+                        contentDescription = if (uiState.shuffleMode) "Shuffle, on" else "Shuffle, off"
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Shuffle,
+                        contentDescription = null,
+                        tint = toggleTint(uiState.shuffleMode),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
                 CustomCircularButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.Outlined.ArrowBackIosNew,
-                        contentDescription = null,
+                        contentDescription = "Previous song",
                         tint = cardBorder
                     )
                 }
 
-                CustomCircularButton(onClick = onPause) {
+                CustomCircularButton(onClick = onPause, selected = true) {
                     Icon(
                         imageVector = if (uiState.isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        contentDescription = null,
-                        tint = cardBorder
+                        contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                        tint = itemsBg,
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(32.dp)
                     )
                 }
 
                 CustomCircularButton(onClick = onNext) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                        contentDescription = null,
+                        contentDescription = "Next song",
                         tint = cardBorder
                     )
                 }
 
-                CustomCircularButton(onClick = onRepeatToggle) {
+                CustomCircularButton(
+                    onClick = onRepeatToggle,
+                    selected = repeatOn,
+                    modifier = Modifier.semantics {
+                        contentDescription = when (uiState.repeatMode) {
+                            1 -> "Repeat one, on"
+                            0 -> "Repeat, off"
+                            else -> "Repeat all, on"
+                        }
+                    }
+                ) {
                     Icon(
-                        imageVector = repeatIcon,
+                        imageVector = if (uiState.repeatMode == 1) Icons.Outlined.RepeatOne else Icons.Outlined.Repeat,
                         contentDescription = null,
-                        tint = if (uiState.repeatMode == 0) cardBorder.copy(alpha = 0.5f) else cardBorder
-                    )
-                }
-
-                CustomCircularButton(onClick = onShuffleToggle) {
-                    Icon(
-                        imageVector = Icons.Outlined.Shuffle,
-                        contentDescription = null,
-                        tint = if (uiState.shuffleMode) cardBorder else cardBorder.copy(alpha = 0.5f)
-                    )
-                }
-
-                CustomCircularButton(onClick = onStats) {
-                    Icon(
-                        imageVector = Icons.Outlined.Insights,
-                        contentDescription = null,
-                        tint = cardBorder
-                    )
-                }
-
-                CustomCircularButton(onClick = onSleepTimer) {
-                    Icon(
-                        imageVector = Icons.Outlined.Bedtime,
-                        contentDescription = null,
-                        tint = if (sleepTimerActive) cardBorder else cardBorder.copy(alpha = 0.5f)
+                        tint = toggleTint(repeatOn),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
         }
     }
 }
+
+/** Icon colour for a toggle: white on the filled ink background when on. */
+internal fun toggleTint(on: Boolean) = if (on) itemsBg else cardBorder
 
 /** Seeks through the shared [PlaybackControllerViewModel] (state lives in singleton repositories). */
 @Composable

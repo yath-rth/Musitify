@@ -11,3 +11,13 @@ val itemsBg = Color(0xFFF8FFFF)       // light sage for cards
 val text = Color(0xFF1A1A2E)          // near black
 val cardBorder = Color(0xFF1A1A2E)    // card outlines / hard shadows
 val dividerColor = Color(0xFFCCC7BE)  // outlineVariant
+
+// Semantic roles. Use these instead of the raw accents so colour keeps one meaning:
+// green = the main action, red = destructive or error only.
+val primaryAction = accentColor2
+val danger = accentColor1
+// Secondary text (metadata, captions, hints): Tracknix uses text at 70%.
+val textSecondary = text.copy(alpha = 0.7f)
+
+/** Press animation length for the hard-shadow buttons (Android DesignSystem BUTTON_ANIMATION_MS). */
+const val BUTTON_ANIMATION_MS = 50

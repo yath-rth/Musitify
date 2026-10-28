@@ -25,6 +25,13 @@ class PlaybackControllerViewModel(
         mediaControllerRepository.startPlayback(songs, startIndex, playlistId)
     }
 
+    /** Starts the list at a random song with shuffle on. */
+    fun playShuffled(songs: List<Song>, playlistId: Int?) {
+        if (songs.isEmpty()) return
+        mediaControllerRepository.startPlayback(songs, songs.indices.random(), playlistId)
+        controller.value?.setShuffle(true)
+    }
+
     /** OFF(0) → ALL(2) → ONE(1) → OFF. */
     fun toggleRepeatMode() {
         controller.value?.cycleRepeatMode()
@@ -55,6 +62,10 @@ class PlaybackControllerViewModel(
 
     fun startSleepTimer(duration: SleepTimerDuration) {
         mediaControllerRepository.startSleepTimer(duration)
+    }
+
+    fun startSleepAtEndOfSong() {
+        mediaControllerRepository.startSleepAtEndOfSong()
     }
 
     fun cancelSleepTimer() {

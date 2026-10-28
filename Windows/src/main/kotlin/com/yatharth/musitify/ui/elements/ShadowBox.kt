@@ -16,10 +16,7 @@ import com.yatharth.musitify.ui.theme.cardBorder
 import com.yatharth.musitify.ui.theme.itemsBg
 import com.yatharth.musitify.ui.theme.text
 
-/**
- * The core hard-shadow card. NOTE: [rounding] is a PERCENT of the shorter side
- * (`RoundedCornerShape(Int)`), exactly like Android.
- */
+/** The core hard-shadow card. [rounding] is the corner radius in dp (as on Android now). */
 @Composable
 fun ShadowBox(
     modifier: Modifier = Modifier,
@@ -32,7 +29,7 @@ fun ShadowBox(
     alignment: Alignment = Alignment.Center,
     content: @Composable () -> Unit,
 ) {
-    val shape = RoundedCornerShape(rounding)
+    val shape = RoundedCornerShape(rounding.dp)
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center

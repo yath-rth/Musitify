@@ -53,7 +53,7 @@ class StatsRepositoryTest {
         assertEquals(43_000, s.averageSessionMs)
         assertEquals(DailyStat(dayStart(now), 90_000), s.mostActiveDay)
         assertEquals(3, s.currentStreak)
-        assertEquals(4, s.longestStreak) // quirk: number of distinct listening days
+        assertEquals(3, s.longestStreak) // consecutive days only (15-17 June); the 1970 legacy day is separate
         assertEquals(43_000, s.averageDailyListenMs)
         assertEquals(200.0 / 3, s.completionRate, 1e-9) // per chunk, songLength 0 excluded
         assertTrue(s.hasAnyListenTime)

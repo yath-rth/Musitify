@@ -3,6 +3,7 @@ package com.yatharth.musitify.ui.screens
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.QueueMusic
 import com.yatharth.musitify.ui.elements.EmptyState
+import com.yatharth.musitify.ui.elements.LoadingState
 import com.yatharth.musitify.util.SongDisplay
 import androidx.activity.compose.BackHandler
 import androidx.collection.CircularArray
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.outlined.Download
 import com.yatharth.musitify.ui.theme.itemsBg
 import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import kotlinx.coroutines.channels.Channel
 import androidx.compose.material3.SnackbarHostState
@@ -88,7 +90,9 @@ import coil.compose.AsyncImage
 import com.yatharth.musitify.data.entity.Playlist
 import com.yatharth.musitify.data.entity.PlaylistInfo
 import com.yatharth.musitify.data.entity.Song
+import com.yatharth.musitify.data.repository.YouTubeResult
 import com.yatharth.musitify.data.viewmodel.AddSongsUiState
+import com.yatharth.musitify.data.viewmodel.YouTubeSearchState
 import com.yatharth.musitify.data.viewmodel.AddSongsViewModel
 import com.yatharth.musitify.data.viewmodel.HomeScreenViewModel
 import com.yatharth.musitify.data.viewmodel.PlaybackControllerViewModel
@@ -154,6 +158,9 @@ fun HomeScreen(
     var isAddToExistingMode by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
     val songFilterQuery by homeScreenViewModel.searchQuery.collectAsState()
+    val youTubeSearch by homeScreenViewModel.youTubeSearch.collectAsState()
+    val previewingId by homeScreenViewModel.previewingId.collectAsState()
+    val previewError by homeScreenViewModel.previewError.collectAsState()
     var selectedSongIds by remember { mutableStateOf(setOf<Song>()) }
     var selectedPlaylistForDialog by remember { mutableStateOf<PlaylistInfo?>(null) }
 
@@ -200,6 +207,16 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         for (message in announcements) snackbarHostState.showSnackbar(message)
     }
+    LaunchedEffect(previewError) {
+        previewError?.let {
+            announcements.trySend(it)
+            homeScreenViewModel.clearPreviewError()
+        }
+    }
+    // A preview shouldn't keep playing once the search that produced it is gone.
+    LaunchedEffect(songFilterQuery, tab) {
+        if (songFilterQuery.isBlank() || tab != HomeTab.LIBRARY) homeScreenViewModel.stopPreview()
+    }
     val visibleJobs = downloadJobs.filter { it.status != DownloadStatus.COMPLETED }
 
     // Once a URL is queued, close the dialog; the queue card shows progress from here.
@@ -239,15 +256,28 @@ fun HomeScreen(
             SnackbarHost(snackbarHostState) { data -> InfoToast(data.visuals.message) }
         },
         topBar = {
-            AppHeader(
-                tab = tab,
-                onTabSelected = { tab = it },
-                onSync = {
-                    homeScreenViewModel.syncLibrary()
-                    homeScreenViewModel.fetchLibrary()
-                },
-                onAddSongs = { showAddDialog = true }
-            )
+            Column {
+                AppHeader(
+                    tab = tab,
+                    onTabSelected = { tab = it },
+                    onSync = {
+                        homeScreenViewModel.syncLibrary()
+                        homeScreenViewModel.fetchLibrary()
+                    },
+                    onAddSongs = { showAddDialog = true }
+                )
+                // Pinned in the top bar so search is reachable without scrolling.
+                if (tab == HomeTab.LIBRARY && selectedPlaylist == null) {
+                    LibrarySearchBar(
+                        query = songFilterQuery,
+                        onQueryChange = { homeScreenViewModel.onSearchQueryChange(it) },
+                        placeholder = "search your library or YouTube",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dotGridBackground()
+                    )
+                }
+            }
         },
         bottomBar = {
             PlaybackControls(
@@ -299,7 +329,7 @@ fun HomeScreen(
                 }
             }
 
-            if (selectedPlaylist == null) {
+            if (selectedPlaylist == null && songFilterQuery.isBlank()) {
                 item(key = "playlists_header") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -361,7 +391,7 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            } else {
+            } else if (selectedPlaylist != null) {
                 val playlistId = selectedPlaylist.playlist.id
                 item(key = "playlist_header") {
                     PlaylistHeader(
@@ -472,7 +502,7 @@ fun HomeScreen(
                     }
                 }
 
-                if (!isListMode) {
+                if (!isListMode && songFilterQuery.isBlank()) {
                     item(key = "songs_carousel") {
                         MusicCarousel(
                             songs = allSongs,
@@ -497,20 +527,40 @@ fun HomeScreen(
                 } else {
                     // Rows are part of this one scrolling list, so nothing gets
                     // cut off inside a fixed-height box.
+                    val ytResults = (youTubeSearch as? YouTubeSearchState.Results)?.items
                     item(key = "songs_search") {
                         Column {
-                            LibrarySearchBar(
-                                query = songFilterQuery,
-                                onQueryChange = { homeScreenViewModel.onSearchQueryChange(it) },
-                                placeholder = "search your library"
-                            )
                             if (listedSongs.isEmpty() && songFilterQuery.isNotBlank()) {
-                                NoSearchResults(
-                                    query = songFilterQuery,
-                                    onClear = { homeScreenViewModel.onSearchQueryChange("") }
-                                )
+                                when {
+                                    youTubeSearch is YouTubeSearchState.Loading ->
+                                        LoadingState("Searching YouTube...")
+                                    !ytResults.isNullOrEmpty() -> Text(
+                                        text = "NOT IN YOUR LIBRARY - FROM YOUTUBE",
+                                        color = textSecondary,
+                                        style = adaptiveTypography().labelMedium,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    )
+                                    youTubeSearch is YouTubeSearchState.Idle -> Unit // still debouncing
+                                    else -> NoSearchResults(
+                                        query = songFilterQuery,
+                                        onClear = { homeScreenViewModel.onSearchQueryChange("") }
+                                    )
+                                }
                             }
                             Spacer(Modifier.height(8.dp))
+                        }
+                    }
+                    if (listedSongs.isEmpty() && !ytResults.isNullOrEmpty()) {
+                        items(ytResults, key = { "yt_${it.id}" }) { result ->
+                            YouTubeResultRow(
+                                result = result,
+                                isPreviewing = result.id == previewingId,
+                                onPreview = { homeScreenViewModel.togglePreview(result) },
+                                onQueue = {
+                                    addSongsViewModel.addSingleSong(result.url)
+                                    announcements.trySend("Queued \"${result.title}\"")
+                                }
+                            )
                         }
                     }
                     items(listedSongs, key = { "song_${it.id}" }) { song ->
@@ -1278,6 +1328,96 @@ private fun LibrarySearchBar(
                 Icon(imageVector = Icons.Outlined.Search, contentDescription = null, tint = cardBorder)
             }
         )
+    }
+}
+
+/**
+ * A YouTube hit. The thumbnail previews the audio; the rest of the row queues
+ * the download.
+ */
+@Composable
+private fun YouTubeResultRow(
+    result: YouTubeResult,
+    isPreviewing: Boolean,
+    onPreview: () -> Unit,
+    onQueue: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(4.dp)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .offset(3.dp, 3.dp)
+                .background(cardBorder, shape)
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(itemsBg)
+                .border(1.5.dp, cardBorder, shape)
+                .clickable(onClick = onQueue)
+                .padding(12.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(width = 72.dp, height = 40.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .clickable(onClick = onPreview)
+            ) {
+                AsyncImage(
+                    model = result.thumbnailUrl,
+                    contentDescription = "Preview ${result.title}",
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = if (isPreviewing) 0.5f else 0.3f))
+                ) {
+                    Icon(
+                        imageVector = if (isPreviewing) Icons.Outlined.Stop else Icons.Outlined.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = result.title,
+                    color = text,
+                    style = adaptiveTypography().bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = listOfNotNull(
+                        result.artist,
+                        result.durationSeconds?.let { "%d:%02d".format(it / 60, it % 60) }
+                    ).joinToString(" - "),
+                    color = textSecondary,
+                    style = adaptiveTypography().bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.Outlined.Download,
+                contentDescription = "Queue download",
+                tint = primaryAction
+            )
+        }
     }
 }
 

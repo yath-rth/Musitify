@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
@@ -78,7 +77,7 @@ fun findCenterItemIndex(listState: LazyListState): Int? {
 /**
  * Shared 3D cover-flow row used by [MusicCarousel] and [PlaylistCarousel].
  *
- * Same transforms as Android — scale 1 → 0.75, rotationY 0 → ±45°, alpha 1 → 0.5,
+ * Same transforms as Android — scale 1 → 0.75, rotationY 0 → ±25°, alpha 1 → 0.75,
  * camera distance 12·density — but driven by a smooth signed distance (no 0.5 dead zone).
  * Tapping the centred card calls [onSelect]; tapping a side card scrolls it to the centre
  * (unless [selectsOffCentre] says otherwise). Long press or right click calls [onContext]
@@ -93,7 +92,6 @@ fun findCenterItemIndex(listState: LazyListState): Int? {
 internal fun CoverFlowCarousel(
     itemCount: Int,
     itemWidth: Dp,
-    itemHeight: Dp,
     spacing: Dp,
     focusIndex: Int?,
     key: (Int) -> Any,
@@ -170,7 +168,6 @@ internal fun CoverFlowCarousel(
             horizontalArrangement = Arrangement.spacedBy(spacing),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(itemHeight)
                 .onPointerEvent(PointerEventType.Scroll, PointerEventPass.Initial) { event ->
                     val change = event.changes.firstOrNull() ?: return@onPointerEvent
                     val delta = change.scrollDelta
@@ -200,15 +197,14 @@ internal fun CoverFlowCarousel(
                 Box(
                     modifier = Modifier
                         .width(itemWidth)
-                        .height(itemHeight)
                         .graphicsLayer {
                             val d = distanceOf(index)
                             val a = abs(d)
                             val scale = lerp(1f, 0.75f, a)
                             scaleX = scale
                             scaleY = scale
-                            rotationY = lerp(0f, 45f, d)
-                            alpha = lerp(1f, 0.5f, a)
+                            rotationY = lerp(0f, 25f, d)
+                            alpha = lerp(1f, 0.75f, a)
                             cameraDistance = 12f * density
                         }
                         .handCursor()

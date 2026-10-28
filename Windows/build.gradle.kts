@@ -48,6 +48,8 @@ dependencies {
 
     // Images (replaces Coil 2)
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
+    // Remote images (YouTube search thumbnails); local art keeps loading from files.
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
 
     // Networking (same as Android)
     implementation("com.squareup.okhttp3:okhttp:5.4.0")
