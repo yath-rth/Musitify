@@ -1,6 +1,8 @@
 <div align="center">
 
-# Musitify
+<img src="docs/screenshots/hero.png" alt="Musitify running on Windows and Android" width="100%"/>
+
+<br/>
 
 **An offline-first, self-hosted music library for Android and Windows.**
 
@@ -84,11 +86,27 @@ Streaming apps rent you music. Musitify lets you **keep** it.
 
 ## Screenshots
 
+### Android
+
 <div align="center">
 
-| Home | Playlist | Now playing | Stats |
+| Library | Now playing | Playlist | Stats |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/01_home.png" width="200" alt="Home screen with downloads panel and carousels"/> | <img src="docs/screenshots/15_playlist_opened.png" width="200" alt="An opened playlist"/> | <img src="docs/screenshots/17_song_loaded_in_player.png" width="200" alt="A song loaded in the player"/> | <img src="docs/screenshots/30_stats_screen.png" width="200" alt="Listening stats screen"/> |
+| <img src="docs/screenshots/android-home.png" width="200" alt="Library with playlist and song carousels"/> | <img src="docs/screenshots/android-now-playing.png" width="200" alt="Now Playing with the spinning vinyl"/> | <img src="docs/screenshots/android-playlist.png" width="200" alt="Playlist with drag-to-reorder list"/> | <img src="docs/screenshots/android-stats.png" width="200" alt="Listening stats with streak"/> |
+| **YouTube search** | **Sleep timer** | | |
+| <img src="docs/screenshots/android-search.png" width="200" alt="Search falling back to YouTube results"/> | <img src="docs/screenshots/android-sleep-timer.png" width="200" alt="Sleep timer options"/> | | |
+
+</div>
+
+### Windows
+
+<div align="center">
+
+<img src="docs/screenshots/windows-library.png" alt="Windows library with playlist and song carousels" width="100%"/>
+
+<br/><br/>
+
+<img src="docs/screenshots/windows-stats.png" alt="Windows stats dashboard" width="100%"/>
 
 </div>
 
@@ -247,7 +265,7 @@ Musitify/
 │   ├── schemas/                     # Exported Room schema
 │   └── docs/map/                    # Map of the port: data, engine, sync, UI
 │
-└── docs/screenshots/                # Images used in this README
+└── docs/screenshots/                # README images (hero banner and app screenshots)
 ```
 
 ---
